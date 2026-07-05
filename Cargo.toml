@@ -2,14 +2,72 @@
 name = "luma"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+description = "Luma public library crate and workspace root"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/example/luma"
+readme = "README.md"
+keywords = ["lua", "dsl", "runtime"]
+categories = ["compilers", "development-tools"]
+
+[features]
+default = ["parser"]
+syntax = ["dep:luma-syntax"]
+parser = ["syntax", "dep:luma-parser"]
+runtime = ["dep:luma-runtime"]
+eval = ["runtime", "dep:luma-eval"]
+engine-omnilua = ["runtime", "dep:luma-engine-omnilua"]
+cli = []
 
 [dependencies]
+luma-syntax = { path = "crates/luma-syntax", optional = true }
+luma-parser = { path = "crates/luma-parser", optional = true }
+luma-runtime = { path = "crates/luma-runtime", optional = true }
+luma-eval = { path = "crates/luma-eval", optional = true }
+luma-engine-omnilua = { path = "crates/luma-engine-omnilua", optional = true }
 
 [workspace]
 resolver = "3"
 members = [
-
+    ".",
+    "crates/luma-syntax",
+    "crates/luma-parser",
+    "crates/luma-eval",
+    "crates/luma-runtime",
+    "crates/luma-engine-omnilua",
+    "crates/luma-cli",
 ]
 
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/example/luma"
+
 [workspace.dependencies]
-omnilua ={ version = "0.4.3" }
+omnilua = { version = "0.4.3" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -2 }
+nursery = { level = "warn", priority = -3 }
+cargo = { level = "warn", priority = -4 }
+module_name_repetitions = "allow"
+multiple_crate_versions = "allow"
+
+[package.metadata.release]
+shared-version = true
+tag-name = "v{{version}}"
+pre-release-commit-message = "release: luma {{version}}"
+
+[workspace.metadata.ci]
+msrv = "1.85.0"
+metadata = "cargo metadata --format-version=1"
+fmt = "cargo fmt --all --check"
+clippy = "cargo clippy --workspace --all-targets --all-features -- -D warnings"
+test = "cargo test --workspace --all-features"
