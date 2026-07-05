@@ -30,13 +30,13 @@ impl Error {
 
     /// Creates a standard placeholder error for behavior that has not been implemented yet.
     #[must_use]
-    pub fn unsupported(operation: &'static str) -> Self {
+    pub const fn unsupported(operation: &'static str) -> Self {
         Self::Unsupported { operation }
     }
 
     /// Converts a syntax-layer diagnostic into an `luma-serde` error.
     #[must_use]
-    pub fn from_diagnostic(diagnostic: Diagnostic) -> Self {
+    pub const fn from_diagnostic(diagnostic: Diagnostic) -> Self {
         Self::Diagnostic(diagnostic)
     }
 

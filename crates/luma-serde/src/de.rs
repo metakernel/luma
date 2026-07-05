@@ -29,16 +29,18 @@ impl<'de> ValueDeserializer<'de> {
     }
 
     fn runtime_only_error(kind: &'static str, value: &luma_syntax::LumaHostValue) -> Error {
-        Error::custom(match &value.label {
-            Some(label) => format!(
+        Error::custom(value.label.as_ref().map_or_else(
+            || {
+                format!(
+                    "cannot deserialize runtime-only Luma {kind} value `{}`",
+                    value.kind
+                )
+            },
+            |label| format!(
                 "cannot deserialize runtime-only Luma {kind} value `{}` ({label})",
                 value.kind
             ),
-            None => format!(
-                "cannot deserialize runtime-only Luma {kind} value `{}`",
-                value.kind
-            ),
-        })
+        ))
     }
 
     fn key_error() -> Error {
@@ -108,7 +110,9 @@ impl<'de> ValueDeserializer<'de> {
         V: Visitor<'de>,
     {
         match self.value {
-            LumaValue::Number(LumaNumber::Integer(value)) => visitor.visit_f64(*value as f64),
+            LumaValue::Number(LumaNumber::Integer(value)) => {
+                visitor.visit_f64(integer_to_f64(*value)?)
+            }
             LumaValue::Number(LumaNumber::Float(value)) => visitor.visit_f64(*value),
             LumaValue::Tagged(tagged) => {
                 ValueDeserializer::new(&tagged.value).deserialize_float(visitor)
@@ -608,8 +612,7 @@ impl<'de> VariantAccess<'de> for EnumValueAccess<'de> {
 
     fn unit_variant(self) -> Result<()> {
         match self.value {
-            None => Ok(()),
-            Some(LumaValue::Null(_)) => Ok(()),
+            Some(LumaValue::Null(_)) | None => Ok(()),
             Some(other) => Err(Error::custom(format!(
                 "expected unit variant payload to be null, got {}",
                 value_kind(other)
@@ -723,7 +726,9 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
         V: Visitor<'de>,
     {
         match self.key {
-            LumaKey::Number(LumaNumber::Integer(value)) => visitor.visit_f64(*value as f64),
+            LumaKey::Number(LumaNumber::Integer(value)) => {
+                visitor.visit_f64(integer_to_f64(*value)?)
+            }
             LumaKey::Number(LumaNumber::Float(value)) => visitor.visit_f64(*value),
             other => Err(ValueDeserializer::invalid_type(
                 unexpected_key(other),
@@ -809,7 +814,14 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
     }
 }
 
-fn value_kind(value: &LumaValue) -> &'static str {
+fn integer_to_f64(value: i64) -> Result<f64> {
+    value
+        .to_string()
+        .parse::<f64>()
+        .map_err(|error| Error::custom(format!("failed to convert integer to float: {error}")))
+}
+
+const fn value_kind(value: &LumaValue) -> &'static str {
     match value {
         LumaValue::Null(_) => "null",
         LumaValue::Boolean(_) => "boolean",
@@ -854,8 +866,8 @@ fn unexpected_key(key: &LumaKey) -> de::Unexpected<'_> {
 #[cfg(test)]
 mod tests {
     use luma_syntax::{
-        LumaHostValue, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaSequence,
-        LumaTag, LumaTagName, LumaTaggedValue, LumaValue, Span,
+        FileId, LumaHostValue, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber,
+        LumaSequence, LumaTag, LumaTagName, LumaTaggedValue, LumaValue, Span,
     };
     use serde::Deserialize;
 
@@ -991,7 +1003,7 @@ mod tests {
         let value = LumaValue::Null(LumaNull);
 
         assert_eq!(from_value::<Option<i32>>(&value).unwrap(), None);
-        assert_eq!(from_value::<()>(&value).unwrap(), ());
+        from_value::<()>(&value).unwrap();
     }
 
     #[test]
@@ -1026,7 +1038,7 @@ mod tests {
                 name: LumaTagName {
                     value: "Struct".to_owned(),
                 },
-                span: Span::new(Default::default(), 0, 0),
+                span: Span::new(FileId::default(), 0, 0),
             },
             value: Box::new(LumaValue::Mapping(LumaMapping {
                 entries: vec![LumaMappingEntry {
@@ -1049,12 +1061,12 @@ mod tests {
                 name: LumaTagName {
                     value: "Ignored".to_owned(),
                 },
-                span: Span::new(Default::default(), 0, 0),
+                span: Span::new(FileId::default(), 0, 0),
             },
             value: Box::new(LumaValue::Boolean(true)),
             span: None,
         });
-        assert_eq!(from_value::<bool>(&transparent).unwrap(), true);
+        assert!(from_value::<bool>(&transparent).unwrap());
     }
 
     #[test]

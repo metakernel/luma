@@ -25,7 +25,7 @@ impl ValueSerializer {
         Self
     }
 
-    fn unsupported_named(operation: &'static str) -> Error {
+    const fn unsupported_named(operation: &'static str) -> Error {
         Error::unsupported(operation)
     }
 
@@ -41,7 +41,7 @@ impl ValueSerializer {
         Ok(LumaValue::Number(LumaNumber::Integer(value)))
     }
 
-    fn serialize_float(value: f64) -> Result<LumaValue> {
+    const fn serialize_float(value: f64) -> Result<LumaValue> {
         if value.is_finite() {
             Ok(LumaValue::Number(LumaNumber::Float(value)))
         } else {
