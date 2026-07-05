@@ -380,11 +380,8 @@ fn filter_matches(actual: &str, filters: &[String]) -> bool {
 }
 
 fn feature_enabled(feature: &str) -> bool {
-    match feature {
-        "eval" => cfg!(feature = "eval"),
-        "engine-omnilua" => cfg!(feature = "engine-omnilua"),
-        _ => false,
-    }
+    (feature == "eval" && cfg!(feature = "eval"))
+        || (feature == "engine-omnilua" && cfg!(feature = "engine-omnilua"))
 }
 
 fn diagnostics_snapshot(diagnostics: &[luma_syntax::Diagnostic]) -> String {
