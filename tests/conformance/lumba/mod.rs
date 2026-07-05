@@ -423,7 +423,10 @@ pub fn run_cli_fixture_flow() {
         "verify",
         output.to_str().unwrap(),
     ]);
-    assert!(verify.status.success(), "CLI fixture verify failed: {verify:?}");
+    assert!(
+        verify.status.success(),
+        "CLI fixture verify failed: {verify:?}"
+    );
     assert!(String::from_utf8_lossy(&verify.stdout).contains("\"ok\":true"));
 
     let inspect_header = cargo_cli([
@@ -464,7 +467,10 @@ pub fn run_cli_fixture_flow() {
         "--emit",
         "sections",
     ]);
-    assert!(inspect.status.success(), "fixture section inspection failed: {inspect:?}");
+    assert!(
+        inspect.status.success(),
+        "fixture section inspection failed: {inspect:?}"
+    );
     assert!(String::from_utf8_lossy(&inspect.stdout).contains("\"sections\""));
 }
 

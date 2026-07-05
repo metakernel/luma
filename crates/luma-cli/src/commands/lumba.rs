@@ -678,7 +678,7 @@ fn read_bytes(path: &PathBuf, limits: &Limits) -> Result<Vec<u8>, CliError> {
         }
     }
 
-    let mut file = File::open(path).map_err(|error| CliError {
+    let file = File::open(path).map_err(|error| CliError {
         message: format!("failed to read '{}': {error}", path.display()),
     })?;
     let mut bytes = Vec::with_capacity(
