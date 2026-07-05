@@ -15,6 +15,64 @@ Luma stands for **LUa Markup Assembly**: a Lua-adjacent markup language with an 
 
 ## Quickstart
 
+### Luma at a glance
+
+Core data syntax parses without Lua. Evaluation features such as `=`
+expressions, `|lua` blocks, `@if`, `@for`, tags, imports, and host-provided
+names only run when you explicitly enable an evaluator and backend.
+
+```yaml
+-- Version, profile, and metadata directives are explicit document controls.
+@luma 0.1
+@profile safe
+@meta:
+  title: Example Service
+  owner: platform
+
+--[[
+Evaluation features below are inert until the host enables an evaluator.
+]]
+-- Local bindings keep repeated values close to the document.
+let defaults:
+  replicas: 3
+  port: 8080
+let regions:
+  - us-east
+  - eu-west
+
+-- Tags let a host attach domain-specific behavior to a value.
+service: !Service
+  name: api
+  enabled: true
+  replicas: =defaults.replicas
+  ports:
+    - =defaults.port
+    - 9090
+  labels:
+    tier: backend
+    critical: true
+  description: |
+    Public HTTP API.
+    Evaluated values stay explicit.
+  release_note: |lua-
+    local version = "2026.07"
+    return "deployed from Lua block " .. version
+  healthcheck:
+    path: /health
+    timeout_ms: =5 * 1000
+  -- Control flow is evaluator-owned, not parser-owned.
+  @if environment == "prod":
+    debug: false
+  @else:
+    debug: true
+
+pipeline:
+  - build
+  - test
+  @for _, region in regions:
+    - =region
+```
+
 ### Parse without Lua
 
 ```rust
