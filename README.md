@@ -1,6 +1,6 @@
 # LUMA
 
-**LUMA** stands for **Lua Unified Model Assembly**: a Lua-adjacent markup language for
+**LUMA** stands for **Lua Unified Model Assembly**: a Lua-adjacent modelisation language for
 structured documents that can stay pure data, or be assembled and evaluated with
 explicit host capabilities.
 
