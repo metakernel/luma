@@ -42,7 +42,7 @@ Restricted evaluation:
 - rejects runtime-only outputs like functions/userdata/host objects
 - rejects host keys in deterministic mode
 
-The evaluator also rejects obviously unsafe source references such as `_G`, `_ENV`, `io`, `os`, `debug`, `require`, `load`, metatable/raw APIs, `coroutine`, `ffi`, `jit`, and known nondeterministic calls like `math.random`.
+The evaluator also rejects obviously unsafe global or module names such as `_G`, `_ENV`, `io`, `os`, `debug`, `require`, `load`, metatable/raw APIs, `coroutine`, `ffi`, `jit`, and known nondeterministic calls like `math.random`.
 
 ## Extension points are explicit trust boundaries
 

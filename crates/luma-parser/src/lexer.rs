@@ -30,11 +30,11 @@ pub fn lex_str(file_id: FileId, name: &str, text: &str) -> Lexed {
             source: SourceText {
                 source: luma_syntax::LumaSource::new(file_id, name, String::new()),
             },
-            tokens: vec![Token {
-                kind: TokenKind::EndOfFile,
-                lexeme: String::new(),
-                span: Span::new(file_id, 0, 0),
-            }],
+            tokens: vec![Token::new(
+                TokenKind::EndOfFile,
+                String::new(),
+                Span::new(file_id, 0, 0),
+            )],
             diagnostics: vec![diagnostic],
             indents: Vec::new(),
         },
@@ -78,11 +78,8 @@ impl Lexer {
             self.source.as_str().len(),
             self.source.as_str().len(),
         );
-        self.tokens.push(Token {
-            kind: TokenKind::EndOfFile,
-            lexeme: String::new(),
-            span,
-        });
+        self.tokens
+            .push(Token::new(TokenKind::EndOfFile, String::new(), span));
         Lexed {
             source: self.source,
             tokens: self.tokens,
@@ -91,6 +88,7 @@ impl Lexer {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn lex(&mut self) {
         let text = self.source.as_str().to_owned();
         let bytes = text.as_bytes();
@@ -119,6 +117,7 @@ impl Lexer {
             self.indents.push(LineIndent {
                 line: self.line_number,
                 width: indent_width,
+                span: Span::new(self.file_id(), line_start, line_start + indent_prefix_len),
                 is_ignorable: is_blank || is_comment_only,
             });
 
@@ -150,11 +149,13 @@ impl Lexer {
             }
 
             if is_comment_only {
-                self.push_token(
+                self.push_token_with_trivia(
                     TokenKind::Comment,
                     line_start + indent_prefix_len,
                     line_end,
                     trimmed,
+                    Span::new(self.file_id(), line_start, line_start + indent_prefix_len),
+                    Span::new(self.file_id(), line_end, line_end),
                 );
                 self.finish_line(line_end);
                 continue;
@@ -171,14 +172,29 @@ impl Lexer {
                 self.diagnostics.push(diagnostic);
             }
 
-            self.lex_inline(line_start + indent_prefix_len, code);
+            let last_code_token = self.lex_inline(line_start + indent_prefix_len, code);
 
             if let Some(comment_text) = comment {
                 let comment_start = line_start
                     + indent_prefix_len
                     + code.len()
                     + count_trailing_spaces(&trimmed[code.len()..]);
-                self.push_token(TokenKind::Comment, comment_start, line_end, comment_text);
+                let leading = Span::new(
+                    self.file_id(),
+                    line_start + indent_prefix_len + code.len(),
+                    comment_start,
+                );
+                if let Some(last) = last_code_token {
+                    self.tokens[last].trailing_trivia = leading;
+                }
+                self.push_token_with_trivia(
+                    TokenKind::Comment,
+                    comment_start,
+                    line_end,
+                    comment_text,
+                    leading,
+                    Span::new(self.file_id(), line_end, line_end),
+                );
             }
 
             if let Some(header) = block_header_from_suffix(code) {
@@ -212,22 +228,50 @@ impl Lexer {
         width
     }
 
-    fn lex_inline(&mut self, line_offset: usize, code: &str) {
+    #[allow(clippy::too_many_lines)]
+    fn lex_inline(&mut self, line_offset: usize, code: &str) -> Option<usize> {
         let mut index = 0;
         let bytes = code.as_bytes();
+        let mut last_token_index: Option<usize> = None;
+        let mut pending_leading = Span::new(self.file_id(), line_offset, line_offset);
         while index < bytes.len() {
             let ch = code[index..].chars().next().unwrap();
             if ch.is_whitespace() {
+                let start = index;
                 index += ch.len_utf8();
+                while index < bytes.len() {
+                    let next = code[index..].chars().next().unwrap();
+                    if !next.is_whitespace() {
+                        break;
+                    }
+                    index += next.len_utf8();
+                }
+                pending_leading =
+                    Span::new(self.file_id(), line_offset + start, line_offset + index);
+                if let Some(last) = last_token_index {
+                    self.tokens[last].trailing_trivia = pending_leading;
+                }
                 continue;
             }
 
             if let Some((kind, len)) = try_fixed_token(&code[index..]) {
-                self.push_token(
+                let token_index = self.push_token_with_trivia(
                     kind,
                     line_offset + index,
                     line_offset + index + len,
                     &code[index..index + len],
+                    pending_leading,
+                    Span::new(
+                        self.file_id(),
+                        line_offset + index + len,
+                        line_offset + index + len,
+                    ),
+                );
+                last_token_index = Some(token_index);
+                pending_leading = Span::new(
+                    self.file_id(),
+                    line_offset + index + len,
+                    line_offset + index + len,
                 );
                 index += len;
                 if kind == TokenKind::Equals {
@@ -235,12 +279,17 @@ impl Lexer {
                     if !expr.is_empty() {
                         let expr_start =
                             line_offset + index + code[index..].find(expr).unwrap_or(0);
-                        self.push_token(
+                        let leading = Span::new(self.file_id(), line_offset + index, expr_start);
+                        self.tokens[token_index].trailing_trivia = leading;
+                        let expr_end = expr_start + expr.len();
+                        last_token_index = Some(self.push_token_with_trivia(
                             TokenKind::PlainString,
                             expr_start,
-                            expr_start + expr.len(),
+                            expr_end,
                             expr,
-                        );
+                            leading,
+                            Span::new(self.file_id(), expr_end, expr_end),
+                        ));
                         break;
                     }
                 }
@@ -251,11 +300,22 @@ impl Lexer {
                 let start = index;
                 if let Some(len) = scan_quoted(&code[index..], ch) {
                     let kind = TokenKind::String;
-                    self.push_token(
+                    last_token_index = Some(self.push_token_with_trivia(
                         kind,
                         line_offset + start,
                         line_offset + start + len,
                         &code[start..start + len],
+                        pending_leading,
+                        Span::new(
+                            self.file_id(),
+                            line_offset + start + len,
+                            line_offset + start + len,
+                        ),
+                    ));
+                    pending_leading = Span::new(
+                        self.file_id(),
+                        line_offset + start + len,
+                        line_offset + start + len,
                     );
                     index += len;
                 } else {
@@ -267,11 +327,17 @@ impl Lexer {
                             line_offset + code.len(),
                         )),
                     ));
-                    self.push_token(
+                    self.push_token_with_trivia(
                         TokenKind::Error,
                         line_offset + start,
                         line_offset + code.len(),
                         &code[start..],
+                        pending_leading,
+                        Span::new(
+                            self.file_id(),
+                            line_offset + code.len(),
+                            line_offset + code.len(),
+                        ),
                     );
                     break;
                 }
@@ -288,8 +354,18 @@ impl Lexer {
             }
             let lexeme = &code[start..index];
             let kind = classify_word(lexeme);
-            self.push_token(kind, line_offset + start, line_offset + index, lexeme);
+            last_token_index = Some(self.push_token_with_trivia(
+                kind,
+                line_offset + start,
+                line_offset + index,
+                lexeme,
+                pending_leading,
+                Span::new(self.file_id(), line_offset + index, line_offset + index),
+            ));
+            pending_leading = Span::new(self.file_id(), line_offset + index, line_offset + index);
         }
+
+        last_token_index
     }
 
     fn lex_block_comment(&mut self, text: &str, start: usize) {
@@ -404,11 +480,36 @@ impl Lexer {
     }
 
     fn push_token(&mut self, kind: TokenKind, start: usize, end: usize, lexeme: &str) {
-        self.tokens.push(Token {
+        self.push_token_with_trivia(
             kind,
-            lexeme: lexeme.to_owned(),
-            span: Span::new(self.file_id(), start, end),
+            start,
+            end,
+            lexeme,
+            Span::new(self.file_id(), start, start),
+            Span::new(self.file_id(), end, end),
+        );
+    }
+
+    fn push_token_with_trivia(
+        &mut self,
+        kind: TokenKind,
+        start: usize,
+        end: usize,
+        lexeme: &str,
+        leading_trivia: Span,
+        trailing_trivia: Span,
+    ) -> usize {
+        let index = self.tokens.len();
+        self.tokens.push(Token {
+            leading_trivia,
+            trailing_trivia,
+            ..Token::new(
+                kind,
+                lexeme.to_owned(),
+                Span::new(self.file_id(), start, end),
+            )
         });
+        index
     }
 
     const fn file_id(&self) -> FileId {
@@ -761,6 +862,68 @@ mod tests {
                 .diagnostics
                 .iter()
                 .any(|diagnostic| diagnostic.code.code() == "E0026")
+        );
+    }
+
+    #[test]
+    fn records_whitespace_comment_and_newline_trivia_spans() {
+        let source = "root:  value  -- note\n";
+        let lexed = lex_str(FileId(1), "spec.luma", source);
+        assert!(lexed.diagnostics.is_empty(), "{:?}", lexed.diagnostics);
+
+        let colon = lexed
+            .tokens
+            .iter()
+            .find(|token| token.kind == TokenKind::Colon)
+            .unwrap();
+        let value = lexed
+            .tokens
+            .iter()
+            .find(|token| token.lexeme == "value")
+            .unwrap();
+        let comment = lexed
+            .tokens
+            .iter()
+            .find(|token| token.kind == TokenKind::Comment)
+            .unwrap();
+        let line_break = lexed
+            .tokens
+            .iter()
+            .find(|token| token.kind == TokenKind::LineBreak)
+            .unwrap();
+
+        assert_eq!(&source[colon.trailing_trivia.byte_range()], "  ");
+        assert_eq!(&source[value.leading_trivia.byte_range()], "  ");
+        assert_eq!(&source[value.trailing_trivia.byte_range()], "  ");
+        assert_eq!(&source[comment.leading_trivia.byte_range()], "  ");
+        assert_eq!(comment.lexeme, "-- note");
+        assert_eq!(&source[line_break.span.byte_range()], "\n");
+        assert!(comment.kind.is_comment());
+        assert!(comment.kind.is_trivia());
+    }
+
+    #[test]
+    fn records_block_comments_and_indentation_trivia_spans() {
+        let source = "  -- note\nroot:\n    child: value\n--[[block\ncomment]]\n";
+        let lexed = lex_str(FileId(1), "spec.luma", source);
+
+        assert!(lexed.diagnostics.is_empty(), "{:?}", lexed.diagnostics);
+        assert_eq!(lexed.indents.len(), 3);
+        assert_eq!(&source[lexed.indents[0].span.byte_range()], "  ");
+        assert!(lexed.indents[0].is_ignorable);
+        assert_eq!(&source[lexed.indents[1].span.byte_range()], "");
+        assert!(!lexed.indents[1].is_ignorable);
+        assert_eq!(&source[lexed.indents[2].span.byte_range()], "    ");
+        assert!(!lexed.indents[2].is_ignorable);
+
+        let block_comment = lexed
+            .tokens
+            .iter()
+            .find(|token| token.kind == TokenKind::Comment && token.lexeme.starts_with("--[["))
+            .unwrap();
+        assert_eq!(
+            &source[block_comment.span.byte_range()],
+            "--[[block\ncomment]]"
         );
     }
 }

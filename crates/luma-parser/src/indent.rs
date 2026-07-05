@@ -11,6 +11,8 @@ pub struct LineIndent {
     pub line: usize,
     /// Leading spaces.
     pub width: usize,
+    /// Leading indentation trivia span for the physical line.
+    pub span: Span,
     /// Whether the line is blank or comment-only.
     pub is_ignorable: bool,
 }

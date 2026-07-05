@@ -4,7 +4,7 @@ use luma_syntax::{
     BlockChomping, BlockKind, Comment, CommentKind, ConditionalBlock, Directive, Document,
     DocumentItem, ElseBranch, LetBinding, LoopBindings, LoopBlock, LumaFile, LumaNode,
     MappingBlock, MappingEntry, MappingItem, MappingKey, SequenceBlock, SequenceItem, StringNode,
-    StringStyle,
+    StringStyle, SyntaxKind, TextEdit, TextRange, apply_text_edits,
 };
 
 use crate::{FileId, Parsed, parse_str};
@@ -16,6 +16,50 @@ pub struct FormatOptions {
     pub indent_width: usize,
     /// Preserve explicit document terminators when present.
     pub preserve_document_terminators: bool,
+}
+
+/// Behavior when range formatting cannot be represented as edits confined to the
+/// requested expanded range.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FormatRangeFallback {
+    /// Return a single whole-document replacement edit.
+    WholeDocument,
+    /// Reject the request with [`FormatRangeError::RequiresWholeDocument`].
+    Reject,
+}
+
+/// Range-formatting configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FormatRangeOptions {
+    /// Formatter configuration used for the canonical whole-document render.
+    pub format: FormatOptions,
+    /// Fallback behavior when edits would be required outside the expanded range.
+    pub fallback: FormatRangeFallback,
+}
+
+impl Default for FormatRangeOptions {
+    fn default() -> Self {
+        Self {
+            format: FormatOptions::default(),
+            fallback: FormatRangeFallback::WholeDocument,
+        }
+    }
+}
+
+/// Range-formatting failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FormatRangeError {
+    /// The requested range is out of bounds or has `start > end`.
+    InvalidRange(TextRange),
+    /// The requested range is not aligned to UTF-8 character boundaries.
+    NonBoundaryRange(TextRange),
+    /// Canonical formatting requires edits outside the expanded range.
+    RequiresWholeDocument {
+        /// Original caller-provided range.
+        requested: TextRange,
+        /// Line/node-expanded range used for the local formatting attempt.
+        expanded: TextRange,
+    },
 }
 
 impl Default for FormatOptions {
@@ -54,6 +98,92 @@ pub fn format_str(file_id: FileId, name: &str, source: &str) -> ParsedFormatting
     ParsedFormatting { parsed, formatted }
 }
 
+/// Parses and formats a source range into canonical Luma edits.
+///
+/// The formatter is whole-document canonical today. This helper therefore:
+///
+/// - validates UTF-8/source bounds for `range`
+/// - expands the range to intersecting lines and then, when possible, to the
+///   smallest containing syntax node span
+/// - renders the entire document canonically
+/// - returns minimal edits only when all intersecting changes stay within the
+///   expanded range
+/// - otherwise either falls back to a single whole-document replacement edit or
+///   returns [`FormatRangeError::RequiresWholeDocument`], depending on `options`
+///
+/// # Errors
+///
+/// Returns [`FormatRangeError`] when `range` is out of bounds, is not aligned to
+/// UTF-8 boundaries, or localized formatting would require a whole-document edit
+/// and `options` rejects that fallback.
+pub fn format_range_edits(
+    file_id: FileId,
+    name: &str,
+    source: &str,
+    range: TextRange,
+    options: FormatRangeOptions,
+) -> Result<(ParsedFormatting, Vec<TextEdit>), FormatRangeError> {
+    let parsed = parse_str(file_id, name, source);
+    let formatted = ParsedFormatting {
+        formatted: format_file_with_source(&parsed.file, parsed.source.as_str(), options.format),
+        parsed,
+    };
+    let edits = format_parsed_range_edits(&formatted.parsed, range, options)?;
+    Ok((formatted, edits))
+}
+
+/// Computes canonical minimal replacement edits from `old` to `new`.
+///
+/// The current implementation returns either zero edits when unchanged or one
+/// source-relative replacement edit. Single-line changes keep the smallest
+/// replacement span; multi-line changes expand to whole line boundaries.
+#[must_use]
+pub fn minimal_text_edits(old: &str, new: &str) -> Vec<TextEdit> {
+    if old == new {
+        return Vec::new();
+    }
+
+    let prefix = common_prefix_len(old, new);
+    let suffix = common_suffix_len(&old[prefix..], &new[prefix..]);
+
+    let mut old_start = prefix;
+    let mut old_end = old.len() - suffix;
+    let mut new_start = prefix;
+    let mut new_end = new.len() - suffix;
+
+    let old_changed = &old[old_start..old_end];
+    let new_changed = &new[new_start..new_end];
+    if old_changed.contains('\n') || new_changed.contains('\n') {
+        old_start = line_start(old, old_start);
+        old_end = line_end(old, old_end);
+        new_start = line_start(new, new_start);
+        new_end = line_end(new, new_end);
+
+        let old_suffix = &old[old_end..];
+        let new_suffix = &new[new_end..];
+        if let Some((old_line_ending, new_line_ending)) =
+            shared_leading_line_ending_len(old_suffix, new_suffix)
+        {
+            old_end += old_line_ending;
+            new_end += new_line_ending;
+        }
+    }
+
+    let edit = TextEdit {
+        range: TextRange::new(old_start, old_end),
+        text: new[new_start..new_end].to_owned(),
+    };
+
+    if apply_text_edits(old, std::slice::from_ref(&edit)).as_deref() == Some(new) {
+        return vec![edit];
+    }
+
+    vec![TextEdit {
+        range: TextRange::new(line_start(old, prefix), old.len()),
+        text: new[line_start(new, prefix)..].to_owned(),
+    }]
+}
+
 /// Combined parse + format result intended for editor-style callers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedFormatting {
@@ -61,6 +191,70 @@ pub struct ParsedFormatting {
     pub parsed: Parsed,
     /// Canonical formatting output.
     pub formatted: FormattedDocument,
+}
+
+impl ParsedFormatting {
+    /// Returns canonical source-relative edits for rewriting the full document.
+    #[must_use]
+    pub fn text_edits_for_source(&self, source: &str) -> Vec<TextEdit> {
+        minimal_text_edits(source, &self.formatted.text)
+    }
+}
+
+/// Computes canonical edits for a requested source range.
+///
+/// # Errors
+///
+/// Returns [`FormatRangeError`] when `range` is invalid for the parsed source or
+/// localized formatting would require a whole-document edit and `options`
+/// rejects that fallback.
+pub fn format_parsed_range_edits(
+    parsed: &Parsed,
+    range: TextRange,
+    options: FormatRangeOptions,
+) -> Result<Vec<TextEdit>, FormatRangeError> {
+    validate_range(parsed.source.as_str(), range)?;
+
+    let source = parsed.source.as_str();
+    let expanded = expanded_format_range(parsed, range);
+    let formatted = format_file_with_source(&parsed.file, source, options.format);
+    let full_edits = minimal_text_edits(source, &formatted.text);
+
+    let mut intersecting = Vec::new();
+    let mut outside = false;
+    for edit in &full_edits {
+        if ranges_intersect(edit.range, expanded) {
+            if !range_contains(expanded, edit.range) {
+                outside = true;
+            }
+            intersecting.push(edit.clone());
+        } else {
+            outside = true;
+        }
+    }
+
+    if intersecting.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    if outside {
+        return match options.fallback {
+            FormatRangeFallback::WholeDocument => Ok(vec![TextEdit {
+                range: TextRange::new(0, source.len()),
+                text: formatted.text,
+            }]),
+            FormatRangeFallback::Reject => Err(FormatRangeError::RequiresWholeDocument {
+                requested: range,
+                expanded,
+            }),
+        };
+    }
+
+    Ok(localized_minimal_text_edits(
+        source,
+        &formatted.text,
+        expanded,
+    ))
 }
 
 /// Formats a parsed file with explicit options.
@@ -79,6 +273,83 @@ fn format_file_with_source(
         changed: normalize_line_endings(source) != text,
         text,
     }
+}
+
+fn validate_range(source: &str, range: TextRange) -> Result<(), FormatRangeError> {
+    if range.start > range.end || range.end > source.len() {
+        return Err(FormatRangeError::InvalidRange(range));
+    }
+    if !source.is_char_boundary(range.start) || !source.is_char_boundary(range.end) {
+        return Err(FormatRangeError::NonBoundaryRange(range));
+    }
+    Ok(())
+}
+
+fn expanded_format_range(parsed: &Parsed, range: TextRange) -> TextRange {
+    let source = &parsed.source.source;
+    let mut expanded = source
+        .expand_span_to_line_span(range.to_span(source.id))
+        .map_or(range, TextRange::from_span);
+
+    let index = parsed.syntax_index();
+    let mut best = None::<(usize, usize, TextRange)>;
+    for id in index.covering_span(expanded.to_span(source.id)) {
+        let Some(node) = index.node(id) else {
+            continue;
+        };
+        if matches!(node.kind, SyntaxKind::File | SyntaxKind::Document) {
+            continue;
+        }
+        let Some(candidate) = source
+            .expand_span_to_line_span(node.span)
+            .map(TextRange::from_span)
+        else {
+            continue;
+        };
+        if !range_contains(candidate, expanded) {
+            continue;
+        }
+        let score = (candidate.len(), node.span.len(), candidate);
+        if best.is_none_or(|current| score < current) {
+            best = Some(score);
+        }
+    }
+
+    if let Some((_, _, candidate)) = best {
+        expanded = candidate;
+    }
+
+    expanded
+}
+
+fn localized_minimal_text_edits(
+    source: &str,
+    formatted: &str,
+    expanded: TextRange,
+) -> Vec<TextEdit> {
+    let suffix_len = source.len() - expanded.end;
+    let new_end = formatted.len() - suffix_len;
+    let old_slice = &source[expanded.start..expanded.end];
+    let new_slice = &formatted[expanded.start..new_end];
+
+    minimal_text_edits(old_slice, new_slice)
+        .into_iter()
+        .map(|edit| TextEdit {
+            range: TextRange::new(
+                edit.range.start + expanded.start,
+                edit.range.end + expanded.start,
+            ),
+            text: edit.text,
+        })
+        .collect()
+}
+
+const fn ranges_intersect(left: TextRange, right: TextRange) -> bool {
+    left.start < right.end && right.start < left.end
+}
+
+const fn range_contains(outer: TextRange, inner: TextRange) -> bool {
+    outer.start <= inner.start && outer.end >= inner.end
 }
 
 fn render_file(file: &LumaFile, options: FormatOptions) -> String {
@@ -677,6 +948,68 @@ fn normalize_line_endings(source: &str) -> String {
     source.replace("\r\n", "\n").replace('\r', "\n")
 }
 
+fn common_prefix_len(left: &str, right: &str) -> usize {
+    let max = left.len().min(right.len());
+    let mut matched = 0;
+
+    while matched < max && left.as_bytes()[matched] == right.as_bytes()[matched] {
+        matched += 1;
+    }
+
+    while matched > 0 && (!left.is_char_boundary(matched) || !right.is_char_boundary(matched)) {
+        matched -= 1;
+    }
+
+    matched
+}
+
+fn common_suffix_len(left: &str, right: &str) -> usize {
+    let max = left.len().min(right.len());
+    let left_bytes = left.as_bytes();
+    let right_bytes = right.as_bytes();
+    let mut matched = 0;
+
+    while matched < max {
+        let left_index = left.len() - matched - 1;
+        let right_index = right.len() - matched - 1;
+        if left_bytes[left_index] != right_bytes[right_index] {
+            break;
+        }
+        matched += 1;
+    }
+
+    while matched > 0
+        && (!left.is_char_boundary(left.len() - matched)
+            || !right.is_char_boundary(right.len() - matched))
+    {
+        matched -= 1;
+    }
+
+    matched
+}
+
+fn line_start(text: &str, offset: usize) -> usize {
+    text[..offset.min(text.len())]
+        .rfind('\n')
+        .map_or(0, |index| index + 1)
+}
+
+fn line_end(text: &str, offset: usize) -> usize {
+    text[offset.min(text.len())..]
+        .find('\n')
+        .map_or(text.len(), |index| offset.min(text.len()) + index + 1)
+}
+
+fn shared_leading_line_ending_len(old: &str, new: &str) -> Option<(usize, usize)> {
+    if old.starts_with("\r\n") && new.starts_with('\n') {
+        Some((2, 1))
+    } else if old.starts_with(['\n', '\r']) && new.starts_with('\n') {
+        Some((1, 1))
+    } else {
+        None
+    }
+}
+
 fn indent(depth: usize, options: FormatOptions) -> String {
     " ".repeat(depth.saturating_mul(options.indent_width))
 }
@@ -689,9 +1022,12 @@ fn push_line(depth: usize, options: FormatOptions, text: &str, out: &mut String)
 
 #[cfg(test)]
 mod tests {
-    use crate::{FileId, parse_str};
+    use crate::{FileId, apply_text_edits, parse_str};
 
-    use super::format_parsed;
+    use super::{
+        FormatRangeError, FormatRangeFallback, FormatRangeOptions, TextRange, format_parsed,
+        format_parsed_range_edits, format_range_edits, format_str, minimal_text_edits,
+    };
 
     #[test]
     fn formatter_normalizes_line_endings_and_comments() {
@@ -703,5 +1039,215 @@ mod tests {
         let formatted = format_parsed(&parsed);
         assert_eq!(formatted.text, "root:\n  -- note\n  value: hello\n");
         assert!(formatted.changed);
+    }
+
+    #[test]
+    fn unchanged_formatting_returns_no_text_edits() {
+        let source = "root:\n  value: hello\n";
+        let formatted = format_str(FileId(1), "stable.luma", source);
+
+        assert!(!formatted.formatted.changed);
+        assert!(formatted.text_edits_for_source(source).is_empty());
+    }
+
+    #[test]
+    fn one_line_changes_produce_small_replacements() {
+        let source = "root:\n  value: 'hello'\n";
+        let formatted = format_str(FileId(1), "single-line.luma", source);
+        let edits = formatted.text_edits_for_source(source);
+
+        assert_eq!(edits.len(), 1);
+        let quote_start = source.find("'hello'").unwrap();
+        assert_eq!(edits[0].range, TextRange::new(quote_start, quote_start + 7));
+        assert_eq!(edits[0].text, "hello");
+        assert_eq!(
+            apply_text_edits(source, &edits),
+            Some(formatted.formatted.text)
+        );
+    }
+
+    #[test]
+    fn multi_line_changes_expand_to_line_boundaries() {
+        let source = "root:\n    alpha: 1\r\n    beta: 'two'\n";
+        let formatted = format_str(FileId(1), "multi-line.luma", source);
+        let edits = formatted.text_edits_for_source(source);
+
+        assert_eq!(edits.len(), 1);
+        assert_eq!(edits[0].range.start, 6);
+        assert!(source[..edits[0].range.start].ends_with('\n'));
+        assert!(
+            edits[0].range.end == source.len() || source[edits[0].range.end..].starts_with('\n')
+        );
+        assert_eq!(
+            &source[edits[0].range.start..edits[0].range.end],
+            "    alpha: 1\r\n    beta: 'two'\n"
+        );
+        assert_eq!(edits[0].text, "  alpha: 1\n  beta: two\n");
+        assert_eq!(
+            apply_text_edits(source, &edits),
+            Some(formatted.formatted.text)
+        );
+    }
+
+    #[test]
+    fn direct_minimal_text_edits_apply_to_target_text() {
+        let old = "a\n  b\n";
+        let new = "a\n  c\n";
+        let edits = minimal_text_edits(old, new);
+
+        assert_eq!(apply_text_edits(old, &edits), Some(String::from(new)));
+    }
+
+    #[test]
+    fn range_formatting_formats_dirty_scalar_line() {
+        let source = "root:\n  value: 'hello'\n  stable: ok\n";
+        let line_start = source.find("  value").unwrap();
+        let range = TextRange::new(line_start + 10, line_start + 15);
+
+        let (formatted, edits) = format_range_edits(
+            FileId(1),
+            "range-scalar.luma",
+            source,
+            range,
+            FormatRangeOptions::default(),
+        )
+        .unwrap();
+
+        assert_eq!(edits.len(), 1);
+        assert_eq!(&source[edits[0].range.start..edits[0].range.end], "'hello'");
+        assert_eq!(edits[0].text, "hello");
+        let applied = apply_text_edits(source, &edits).unwrap();
+        assert_eq!(applied, "root:\n  value: hello\n  stable: ok\n");
+        assert_eq!(formatted.formatted.text, applied);
+    }
+
+    #[test]
+    fn range_formatting_expands_nested_block_ranges() {
+        let source = "root:\n  child:\n      alpha: 1\n      beta: 'two'\n  stable: ok\n";
+        let start = source.find("alpha").unwrap();
+        let end = source.find("'two'").unwrap() + 5;
+        let range = TextRange::new(start, end);
+
+        let parsed = parse_str(FileId(1), "range-block.luma", source);
+        let edits =
+            format_parsed_range_edits(&parsed, range, FormatRangeOptions::default()).unwrap();
+
+        assert_eq!(edits.len(), 1);
+        assert_eq!(
+            apply_text_edits(source, &edits),
+            Some(String::from(
+                "root:\n  child:\n    alpha: 1\n    beta: two\n  stable: ok\n"
+            ))
+        );
+    }
+
+    #[test]
+    fn unchanged_range_returns_no_edits_even_when_document_is_dirty_elsewhere() {
+        let source = "root:\n  dirty: 'hello'\n  stable: ok\n";
+        let line_start = source.find("  stable").unwrap();
+        let range = TextRange::new(line_start, line_start + "  stable: ok".len());
+
+        let edits = format_range_edits(
+            FileId(1),
+            "range-stable.luma",
+            source,
+            range,
+            FormatRangeOptions::default(),
+        )
+        .unwrap()
+        .1;
+
+        assert!(edits.is_empty());
+    }
+
+    #[test]
+    fn invalid_range_returns_typed_error() {
+        let source = "name: demo\n";
+        let err = format_range_edits(
+            FileId(1),
+            "invalid-range.luma",
+            source,
+            TextRange::new(5, source.len() + 1),
+            FormatRangeOptions::default(),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            FormatRangeError::InvalidRange(TextRange::new(5, source.len() + 1))
+        );
+    }
+
+    #[test]
+    fn non_boundary_range_returns_typed_error() {
+        let source = "name: café\n";
+        let accent = source.find('é').unwrap();
+        let err = format_range_edits(
+            FileId(1),
+            "non-boundary-range.luma",
+            source,
+            TextRange::new(accent, accent + 1),
+            FormatRangeOptions::default(),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            FormatRangeError::NonBoundaryRange(TextRange::new(accent, accent + 1))
+        );
+    }
+
+    #[test]
+    fn range_formatting_falls_back_to_whole_document_edit() {
+        let source = "---\nfirst: 'one'\n---\nsecond: 'two'\n";
+        let start = source.find("'one'").unwrap();
+        let end = start + 5;
+        let range = TextRange::new(start, end);
+
+        let edits = format_range_edits(
+            FileId(1),
+            "range-fallback.luma",
+            source,
+            range,
+            FormatRangeOptions::default(),
+        )
+        .unwrap()
+        .1;
+
+        assert_eq!(edits.len(), 1);
+        assert_eq!(edits[0].range, TextRange::new(0, source.len()));
+        assert_eq!(edits[0].text, "---\nfirst: one\n---\nsecond: two\n");
+        assert_eq!(
+            apply_text_edits(source, &edits),
+            Some(edits[0].text.clone())
+        );
+    }
+
+    #[test]
+    fn reject_fallback_reports_requires_whole_document() {
+        let source = "---\nfirst: 'one'\n---\nsecond: 'two'\n";
+        let start = source.find("'one'").unwrap();
+        let end = start + 5;
+        let range = TextRange::new(start, end);
+
+        let err = format_range_edits(
+            FileId(1),
+            "range-fallback-reject.luma",
+            source,
+            range,
+            FormatRangeOptions {
+                fallback: FormatRangeFallback::Reject,
+                ..Default::default()
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            err,
+            FormatRangeError::RequiresWholeDocument {
+                requested,
+                expanded: _
+            } if requested == range
+        ));
     }
 }

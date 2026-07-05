@@ -1,3 +1,8 @@
+use luma::parser::{FileId as ParserFileId, FormatRangeFallback, FormatRangeOptions};
+use luma::tooling::{
+    TextRange, apply_text_edits, format_document_range_text_edits, format_document_text_edit,
+    format_document_text_edits,
+};
 use luma::tooling::{format_document_edit, serialize_portable_value};
 use luma_parser::{FileId, parse_str};
 use luma_syntax::{
@@ -65,6 +70,115 @@ fn parse_and_serialize_stay_stable_for_generated_values() {
             reparsed.diagnostics
         );
     }
+}
+
+#[test]
+fn editor_formatting_edits_match_canonical_output_for_generated_documents() {
+    let mut generator = Generator::new(0xface_feed_dead_beef);
+
+    for case in 0..256 {
+        let value = generator.value(0);
+        let canonical = serialize_portable_value(&value).expect("generated value should serialize");
+        let source = perturb_editor_source(&canonical, case);
+
+        let formatted = format_document_edit("editor-generated.luma", &source);
+        assert!(
+            formatted.parsed.diagnostics.is_empty(),
+            "case {case}: {:#?}",
+            formatted.parsed.diagnostics
+        );
+
+        let (_, whole_edit) = format_document_text_edit("editor-generated.luma", &source);
+        assert_eq!(
+            apply_text_edits(&source, &[whole_edit]),
+            Some(formatted.formatted.text.clone()),
+            "whole-document edit mismatch for case {case}"
+        );
+
+        let (_, minimal_edits) = format_document_text_edits("editor-generated.luma", &source);
+        assert_eq!(
+            apply_text_edits(&source, &minimal_edits),
+            Some(formatted.formatted.text.clone()),
+            "minimal edits mismatch for case {case}"
+        );
+
+        let normalized_source = formatted.parsed.source.as_str();
+        let (_, range_edits) = format_document_range_text_edits(
+            "editor-generated.luma",
+            normalized_source,
+            TextRange::new(0, normalized_source.len()),
+            FormatRangeOptions {
+                fallback: FormatRangeFallback::Reject,
+                ..FormatRangeOptions::default()
+            },
+        )
+        .expect("full-range formatting should succeed");
+        assert_eq!(
+            apply_text_edits(normalized_source, &range_edits),
+            Some(formatted.formatted.text),
+            "range edits mismatch for case {case}"
+        );
+    }
+}
+
+#[test]
+fn editor_parser_range_formatting_matches_tooling_for_generated_documents() {
+    let mut generator = Generator::new(0x0ddc_0ffe_e15e_babe);
+
+    for case in 0..256 {
+        let value = generator.value(0);
+        let canonical = serialize_portable_value(&value).expect("generated value should serialize");
+        let source = perturb_editor_source(&canonical, case + 17);
+        let normalized = format_document_edit("editor-range.luma", &source)
+            .parsed
+            .source;
+        let normalized_source = normalized.as_str();
+        let range = TextRange::new(0, normalized_source.len());
+        let options = FormatRangeOptions {
+            fallback: FormatRangeFallback::Reject,
+            ..FormatRangeOptions::default()
+        };
+
+        let (_, tooling_edits) = format_document_range_text_edits(
+            "editor-range.luma",
+            normalized_source,
+            range,
+            options,
+        )
+        .expect("tooling range formatting should succeed");
+        let (parser_formatted, parser_edits) = luma::parser::format_range_edits(
+            ParserFileId(42),
+            "editor-range.luma",
+            normalized_source,
+            range,
+            options,
+        )
+        .expect("parser range formatting should succeed");
+
+        assert_eq!(
+            tooling_edits, parser_edits,
+            "tooling/parser edits diverged for case {case}"
+        );
+        assert_eq!(
+            apply_text_edits(normalized_source, &parser_edits),
+            Some(parser_formatted.formatted.text),
+            "parser edits did not reconstruct canonical output for case {case}"
+        );
+    }
+}
+
+fn perturb_editor_source(canonical: &str, case: usize) -> String {
+    let mut source = canonical.replace('\n', "\r\n");
+    if case % 2 == 0 {
+        source = source.replace(": ", ":");
+    }
+    if case % 3 == 0 {
+        source = source.replace("- ", "-   ");
+    }
+    if case % 5 == 0 {
+        source = source.replace("\r\n", "  \r\n");
+    }
+    source
 }
 
 struct Generator {

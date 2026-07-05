@@ -25,10 +25,15 @@ Feature highlights:
 Use `luma::syntax` for stable data types:
 
 - AST: `LumaFile`, `Document`, `DocumentItem`, `LumaNode`, directives, blocks
+- syntax index: `SyntaxIndex`, `SyntaxKind`, `SyntaxNodeId`, `SyntaxNodeInfo`
 - values: `LumaValue`, `LumaMapping`, `LumaSequence`, `LumaTaggedValue`
 - source model: `FileId`, `LumaSource`, `Span`
 - diagnostics: `Diagnostic`, `DiagnosticCode`, `Severity`
 - serializer: `serialize_value`, `serialize_value_with_options`
+
+`SyntaxNodeId` values are deterministic preorder IDs for one indexed parse result.
+They are stable within that `SyntaxIndex` only and are not persistent across edits
+or reparses.
 
 ## Parser layer
 
@@ -38,12 +43,79 @@ Primary entry points:
 
 - `parse_str(FileId, name, text) -> Parsed`
 - `parse_source(SourceText) -> Parsed`
+- `ParseSession::new(FileId, name)` + `ParseSession::parse(...)` / `ParseSession::apply(...)`
+- `Parsed::syntax_index() -> SyntaxIndex`
 - `format_str(FileId, name, text) -> ParsedFormatting`
+- `format_range_edits(FileId, name, text, range, options) -> Result<(ParsedFormatting, Vec<TextEdit>), FormatRangeError>`
+- `format_parsed_range_edits(&Parsed, range, options) -> Result<Vec<TextEdit>, FormatRangeError>`
 - `format_file(...) -> ParsedFormatting`
 - `lex_str(FileId, name, text) -> Lexed`
 - `decode_str(name, text)` / `decode_bytes(name, bytes)`
 
+Lexing also exposes stable lexical editor primitives:
+
+- `Lexed.tokens` preserves public `Token` values with `span`, `leading_trivia`, and `trailing_trivia`
+- `TokenKind::LineBreak` and `TokenKind::Comment` let downstream tools keep structural trivia in token streams
+- `Lexed.indents: Vec<LineIndent>` records per-line indentation width plus `LineIndent.span`
+
+These are lexical/syntactic primitives only. They describe source layout for
+formatting, offset mapping, comment preservation, or lightweight token-aware UX;
+semantic token classification still belongs in downstream tools such as
+`lumals`.
+
+Incremental parsing is currently an **API shell**:
+
+- public types include `TextChange`, `IncrementalParseInput`, `IncrementalParseResult`, `ParsedDocument`, and `ParseSession`
+- update metadata reports `strategy: FullReparse` and `reused: false`
+- changes are validated against the previous normalized source text
+- invalid/out-of-bounds or non-UTF-8-boundary change ranges return typed `IncrementalParseError` values
+- implementation currently applies edits to the previous normalized source and reparses the full document, leaving room for future token/subtree reuse behind the same API
+
 Important guarantee: parser APIs are **engine-agnostic** and do not execute Lua.
+
+Example with public facade APIs only:
+
+```rust
+use luma::Parser;
+use luma::parser::FileId;
+use luma::syntax::SyntaxKind;
+
+let parsed = Parser::new().parse_str(FileId(1), "example.luma", "root:\n  child: 42\n");
+let index = parsed.syntax_index();
+
+let child_offset = parsed.source.as_str().find("child").unwrap();
+let child_id = index.smallest_node_at_offset(child_offset).unwrap();
+let parent_id = index.parent(child_id).unwrap();
+
+assert_eq!(index.node(child_id).unwrap().kind, SyntaxKind::PlainMappingKey);
+assert_eq!(index.node(parent_id).unwrap().kind, SyntaxKind::MappingEntry);
+```
+
+This is the upstream primitive for hover-at-offset-style lookups: resolve an
+editor byte offset to the smallest indexed syntax node, then inspect that node's
+kind/span and slice the source text as needed. Higher-level LSP behavior such as
+hover rendering, semantic token classification, references, rename, and
+workspace-wide symbol/index queries belongs in downstream consumers such as
+`lumals`.
+
+Lexical example with public token/trivia APIs only:
+
+```rust
+use luma::parser::{FileId, TokenKind, lex_str};
+
+let source = "root:\n  child:  next  -- note\n";
+let lexed = lex_str(FileId(1), "example.luma", source);
+
+let next = lexed.tokens.iter().find(|token| token.lexeme == "next").unwrap();
+let comment = lexed.tokens.iter().find(|token| token.kind == TokenKind::Comment).unwrap();
+let line_break = lexed.tokens.iter().find(|token| token.kind == TokenKind::LineBreak).unwrap();
+
+assert_eq!(&source[next.leading_trivia.byte_range()], "  ");
+assert_eq!(&source[next.trailing_trivia.byte_range()], "  ");
+assert_eq!(&source[comment.leading_trivia.byte_range()], "  ");
+assert_eq!(&source[line_break.span.byte_range()], "\n");
+assert_eq!(&source[lexed.indents[1].span.byte_range()], "  ");
+```
 
 ## Tooling helpers
 
@@ -51,9 +123,84 @@ Important guarantee: parser APIs are **engine-agnostic** and do not execute Lua.
 
 - `format_document_edit`
 - `format_document_text_edit`
+- `format_document_text_edits`
+- `format_document_range_text_edits`
+- `FormatRangeOptions`
+- `FormatRangeFallback`
+- `FormatRangeError`
 - `serialize_portable_value`
 - `TextRange`
 - `TextEdit`
+
+These helpers are upstream editing primitives, not a full language-server API.
+They provide canonical formatting edits and stable source-relative edit types for
+editor integrations.
+
+Range-formatting is conservative because canonical formatting is still whole-file today:
+
+- invalid or non-UTF-8-boundary ranges return `FormatRangeError`
+- valid ranges expand to full intersecting lines and then, when possible, to the smallest containing syntax node span
+- if all canonical edits stay inside that expanded range, the API returns minimal source-relative edits for just that range
+- if canonical formatting would also change text outside the expanded range, the default fallback is one whole-document replacement edit; set `FormatRangeOptions { fallback: FormatRangeFallback::Reject, .. }` to reject that case instead
+
+Example:
+
+```rust
+use luma::tooling::{
+    FormatRangeOptions, TextRange, format_document_range_text_edits,
+    format_document_text_edit,
+};
+
+let source = "service:\n  name:'api'\n  enabled:true\n";
+let (_formatting, whole_edit) = format_document_text_edit("service.luma", source);
+assert_eq!(whole_edit.range, TextRange::new(0, source.len()));
+
+let enabled_start = source.find("enabled").unwrap();
+let (_formatting, range_edits) = format_document_range_text_edits(
+    "service.luma",
+    source,
+    TextRange::new(enabled_start, source.len()),
+    FormatRangeOptions::default(),
+)?;
+
+assert!(!range_edits.is_empty());
+# Ok::<(), luma::parser::FormatRangeError>(())
+```
+
+Downstream `lumals` should build semantic formatting UX, code actions, rename
+previews, and other LSP semantics on top of these edit primitives rather than
+expecting the core crate to own those policies.
+
+### Incremental parse shell
+
+Use `ParseSession` plus `IncrementalParseInput`/`TextChange` when an editor wants
+to feed document updates through a stable incremental API:
+
+```rust
+use luma::parser::{
+    FileId, IncrementalParseInput, IncrementalParseStrategy, ParseSession,
+    TextChange,
+};
+use luma::tooling::TextRange;
+
+let mut session = ParseSession::new(FileId(1), "service.luma");
+let first = session.parse("enabled:true\n");
+assert!(first.parsed().diagnostics.is_empty());
+
+let updated = session.apply(IncrementalParseInput::new(vec![TextChange::replace(
+    TextRange::new(0, "enabled:true".len()),
+    "enabled: false",
+)]))?;
+
+assert_eq!(updated.strategy, IncrementalParseStrategy::FullReparse);
+assert!(!updated.reused);
+assert_eq!(updated.document.source(), "enabled: false\n");
+# Ok::<(), luma::parser::IncrementalParseError>(())
+```
+
+Today this remains an API shell around validated full reparses. Downstream tools
+can rely on the request/response shape now, while future parser versions may add
+token or subtree reuse behind the same API.
 
 ## Evaluation layer
 

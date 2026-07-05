@@ -9,12 +9,28 @@
 //! ```rust
 //! use luma::{LumaDocument, LumaValue, Parser};
 //! use luma::parser::FileId;
+//! use luma::syntax::SyntaxKind;
 //!
 //! let parsed = Parser::new().parse_str(FileId(1), "example.luma", "name: Example\n");
 //! let _document: &LumaDocument = &parsed.file.documents[0];
 //! let _value_type: Option<LumaValue> = None;
 //! assert!(parsed.diagnostics.is_empty());
+//!
+//! let index = parsed.syntax_index();
+//! let name_offset = parsed.source.as_str().find("name").unwrap(); // source-relative byte offset
+//! let key_id = index.smallest_node_at_offset(name_offset).unwrap();
+//! let parent_id = index.parent(key_id).unwrap();
+//! assert_eq!(index.node(key_id).unwrap().kind, SyntaxKind::PlainMappingKey);
+//! assert_eq!(index.node(parent_id).unwrap().kind, SyntaxKind::MappingEntry);
 //! ```
+//!
+//! `SyntaxNodeId` values are deterministic for that indexed parse result only.
+//! They are not persistent identities across later edits or reparses.
+//!
+//! Parser and tooling APIs expose lexical/syntactic editor primitives in
+//! source-relative byte offsets/ranges. Higher-level LSP semantics such as
+//! semantic tokens, references, rename, and workspace indexing remain
+//! downstream responsibilities for language servers such as `lumals`.
 //!
 //! # Serialize with serde
 //!
@@ -84,7 +100,10 @@ pub use luma_eval as eval;
 pub use luma_engine_omnilua as engine_omnilua;
 
 #[cfg(feature = "syntax")]
-pub use luma_syntax::{Diagnostic, Document as LumaDocument, LumaValue};
+pub use luma_syntax::{
+    Diagnostic, Document as LumaDocument, LumaValue, SyntaxIndex, SyntaxKind, SyntaxNodeId,
+    SyntaxNodeInfo,
+};
 
 #[cfg(feature = "parser")]
 /// Ergonomic parser facade over the engine-neutral parsing entry points.
@@ -114,6 +133,15 @@ impl Parser {
     #[must_use]
     pub fn parse_source(self, source: luma_parser::SourceText) -> luma_parser::Parsed {
         luma_parser::parse_source(source)
+    }
+
+    /// Creates a stateful incremental parse session for one source buffer.
+    ///
+    /// Today this is a validated full-reparse shell that reports incremental
+    /// metadata without promising subtree reuse yet.
+    #[must_use]
+    pub fn session(self, file_id: luma_parser::FileId, name: &str) -> luma_parser::ParseSession {
+        luma_parser::ParseSession::new(file_id, name)
     }
 }
 

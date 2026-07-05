@@ -6,7 +6,7 @@ use luma_syntax::{
     Comment, ConditionalBlock, ConditionalBranch, Diagnostic, DiagnosticCode, Directive, Document,
     DocumentItem, ElseBranch, FileId, LetBinding, LoopBindings, LoopBlock, LumaFile, LumaNode,
     MappingBlock, MappingEntry, MappingItem, SequenceBlock, SequenceItem, Span, SpreadEntry,
-    TaggedNode,
+    SyntaxIndex, TaggedNode,
 };
 
 use crate::{
@@ -30,6 +30,14 @@ pub struct Parsed {
     pub file: LumaFile,
     /// Collected parse diagnostics.
     pub diagnostics: Vec<Diagnostic>,
+}
+
+impl Parsed {
+    /// Builds a syntax index for this parse result on demand.
+    #[must_use]
+    pub fn syntax_index(&self) -> SyntaxIndex {
+        SyntaxIndex::new(&self.file)
+    }
 }
 
 /// Decodes and parses a UTF-8 string.
@@ -399,15 +407,14 @@ impl Parser {
                         iterable,
                         iterable_start,
                     } => {
-                        let (loop_block, next) =
-                            self.parse_mapping_loop(
-                                index,
-                                indent,
-                                &bindings,
-                                bindings_span,
-                                &iterable,
-                                iterable_start,
-                            );
+                        let (loop_block, next) = self.parse_mapping_loop(
+                            index,
+                            indent,
+                            &bindings,
+                            bindings_span,
+                            &iterable,
+                            iterable_start,
+                        );
                         last_end = loop_block.span.end;
                         items.push(MappingItem::Loop(loop_block));
                         index = next;
@@ -556,15 +563,14 @@ impl Parser {
                         iterable,
                         iterable_start,
                     } => {
-                        let (loop_block, next) =
-                            self.parse_sequence_loop(
-                                index,
-                                indent,
-                                &bindings,
-                                bindings_span,
-                                &iterable,
-                                iterable_start,
-                            );
+                        let (loop_block, next) = self.parse_sequence_loop(
+                            index,
+                            indent,
+                            &bindings,
+                            bindings_span,
+                            &iterable,
+                            iterable_start,
+                        );
                         last_end = loop_block.span.end;
                         items.push(SequenceItem::Loop(loop_block));
                         index = next;
@@ -701,7 +707,9 @@ impl Parser {
         let code = self.code(index).to_owned();
         let rest = code.trim_start_matches("let ");
         let start = self.lines[index].start + indent;
-        let (name, name_span, value, next) = if let Some((raw_name, value_text)) = rest.split_once('=') {
+        let (name, name_span, value, next) = if let Some((raw_name, value_text)) =
+            rest.split_once('=')
+        {
             let name = raw_name.trim();
             let name_start = start + 4 + identifier_offset(name, raw_name);
             if name.is_empty() {
@@ -710,7 +718,8 @@ impl Parser {
                     Some(self.line_span(index)),
                 ));
             }
-            let value_start = start + 4 + raw_name.len() + 1 + (value_text.len() - value_text.trim_start().len());
+            let value_start =
+                start + 4 + raw_name.len() + 1 + (value_text.len() - value_text.trim_start().len());
             let (value, next) = self.parse_value(index, indent, value_text.trim(), value_start);
             (
                 name.to_owned(),
@@ -1320,7 +1329,8 @@ fn parse_loop_bindings(text: &str, span: Span) -> LoopBindings {
     if let Some((key, value)) = text.split_once(',') {
         let key = key.trim();
         let value = value.trim();
-        let key_start = span.start + identifier_offset(key, text.split_once(',').map_or("", |(raw, _)| raw));
+        let key_start =
+            span.start + identifier_offset(key, text.split_once(',').map_or("", |(raw, _)| raw));
         let value_start = span.start + text.find(value).unwrap_or(text.len());
         LoopBindings::Two {
             key: key.to_owned(),
@@ -1408,7 +1418,7 @@ impl MappingItemExt for MappingItem {
 mod tests {
     use luma_syntax::{
         DiagnosticCode, Directive, DocumentItem, FileId, LoopBindings, LumaNode, MappingItem,
-        MappingKey, StringStyle,
+        MappingKey, StringStyle, SyntaxKind,
     };
 
     use super::parse_str;
@@ -1448,6 +1458,25 @@ mod tests {
     }
 
     #[test]
+    fn parsed_builds_syntax_index_on_demand() {
+        let source = "root:\n  child: 42\n";
+        let parsed = parse_str(FileId(1), "example.luma", source);
+
+        assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+
+        let index = parsed.syntax_index();
+        let child_offset = source.find("child").unwrap();
+        let child_id = index.smallest_node_at_offset(child_offset).unwrap();
+        let entry_id = index.parent(child_id).unwrap();
+
+        assert_eq!(
+            index.node(child_id).unwrap().kind,
+            SyntaxKind::PlainMappingKey
+        );
+        assert_eq!(index.node(entry_id).unwrap().kind, SyntaxKind::MappingEntry);
+    }
+
+    #[test]
     fn parses_exact_identifier_subspans() {
         let source = concat!(
             "let foo = 1\n",
@@ -1484,7 +1513,8 @@ mod tests {
         assert_eq!(usage.module_span, luma_syntax::Span::new(FileId(1), 38, 44));
         assert_eq!(usage.alias_span, luma_syntax::Span::new(FileId(1), 48, 53));
 
-        let DocumentItem::Root(LumaNode::Mapping(mapping)) = &parsed.file.documents[0].items[3] else {
+        let DocumentItem::Root(LumaNode::Mapping(mapping)) = &parsed.file.documents[0].items[3]
+        else {
             panic!()
         };
         let MappingItem::Entry(container) = &mapping.items[0] else {
@@ -1496,20 +1526,23 @@ mod tests {
         let MappingItem::Loop(loop_block) = &container_body.items[0] else {
             panic!()
         };
-        assert_eq!(loop_block.iterable.span, luma_syntax::Span::new(FileId(1), 86, 90));
-        match &loop_block.bindings {
-            LoopBindings::Two {
-                key,
-                key_span,
-                value,
-                value_span,
-            } => {
-                assert_eq!(key, "key");
-                assert_eq!(*key_span, luma_syntax::Span::new(FileId(1), 72, 75));
-                assert_eq!(value, "value");
-                assert_eq!(*value_span, luma_syntax::Span::new(FileId(1), 77, 82));
-            }
-            _ => panic!(),
+        assert_eq!(
+            loop_block.iterable.span,
+            luma_syntax::Span::new(FileId(1), 86, 90)
+        );
+        if let LoopBindings::Two {
+            key,
+            key_span,
+            value,
+            value_span,
+        } = &loop_block.bindings
+        {
+            assert_eq!(key, "key");
+            assert_eq!(*key_span, luma_syntax::Span::new(FileId(1), 72, 75));
+            assert_eq!(value, "value");
+            assert_eq!(*value_span, luma_syntax::Span::new(FileId(1), 77, 82));
+        } else {
+            panic!();
         }
 
         let MappingItem::Entry(entry) = &loop_block.body.items[0] else {
@@ -1524,7 +1557,10 @@ mod tests {
             panic!()
         };
         assert_eq!(tagged.tag.span, luma_syntax::Span::new(FileId(1), 107, 111));
-        assert_eq!(tagged.tag.name.span, luma_syntax::Span::new(FileId(1), 108, 111));
+        assert_eq!(
+            tagged.tag.name.span,
+            luma_syntax::Span::new(FileId(1), 108, 111)
+        );
     }
 
     #[test]

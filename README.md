@@ -227,6 +227,47 @@ assert_eq!(formatted.formatted.text, "name: api\nenabled: true\n");
 Parser APIs are engine-agnostic. They never create a Lua runtime and never
 execute expressions.
 
+### Editor primitives without LSP policy
+
+```rust
+use luma::parser::{FileId, IncrementalParseInput, ParseSession, TextChange, parse_str};
+use luma::syntax::SyntaxKind;
+use luma::tooling::{TextRange, format_document_range_text_edits, format_document_text_edit};
+
+let source = "service:\n  name:'api'\n  enabled:true\n";
+let parsed = parse_str(FileId(1), "service.luma", source);
+let index = parsed.syntax_index();
+let name_offset = source.find("name").unwrap();
+let key_id = index.smallest_node_at_offset(name_offset).unwrap();
+assert_eq!(index.node(key_id).unwrap().kind, SyntaxKind::PlainMappingKey);
+
+let (_formatting, whole_edit) = format_document_text_edit("service.luma", source);
+assert_eq!(whole_edit.range, TextRange::new(0, source.len()));
+
+let (_formatting, range_edits) = format_document_range_text_edits(
+    "service.luma",
+    source,
+    TextRange::new(name_offset, source.len()),
+    Default::default(),
+)?;
+assert!(!range_edits.is_empty());
+
+let mut session = ParseSession::new(FileId(1), "service.luma");
+session.parse(source);
+let updated = session.apply(IncrementalParseInput::new(vec![TextChange::replace(
+    TextRange::new(source.find("enabled:true").unwrap(), source.find("enabled:true").unwrap() + "enabled:true".len()),
+    "enabled: false",
+)]))?;
+assert_eq!(updated.document.source(), "service:\n  name:'api'\n  enabled: false\n");
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+These are upstream primitives for editor integrations: syntax lookup by offset,
+canonical formatting edits, conservative range formatting, and an incremental
+parse shell. Full LSP semantics such as semantic tokens, find references,
+rename, and workspace indexing are downstream responsibilities for `lumals` or
+other language servers.
+
 ### Serialize Rust data
 
 ```rust
@@ -283,7 +324,7 @@ need the lower-level evaluator directly.
   wiring.
 - Resolver policies reject parent traversal and network access unless the host
   deliberately allows them.
-- Restricted evaluation rejects obvious unsafe references such as `_G`, `_ENV`,
+- Restricted evaluation rejects obvious unsafe global or module names such as `_G`, `_ENV`,
   `io`, `os`, `debug`, `require`, `load`, metatable/raw APIs, coroutine APIs,
   FFI/JIT hooks, and nondeterministic calls such as `math.random`.
 
@@ -309,7 +350,10 @@ cargo run --example tooling
 cargo run --example loader_omnilua --features omnilua
 ```
 
-`examples/app.luma` is a small CLI sample input.
+`examples/tooling.rs` shows lexical token/trivia lookup via `lex_str`,
+hover-at-offset-style syntax lookup, formatting edits, range formatting, and
+incremental parse updates using only default features. `examples/app.luma` is a
+small CLI sample input.
 
 ## Docs
 

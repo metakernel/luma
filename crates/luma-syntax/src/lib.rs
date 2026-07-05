@@ -6,6 +6,7 @@ pub mod ast;
 pub mod diagnostic;
 pub mod serialize;
 pub mod source;
+pub mod syntax_index;
 pub mod token;
 pub mod value;
 
@@ -19,7 +20,11 @@ pub use ast::{
 };
 pub use diagnostic::{Diagnostic, DiagnosticCode, RelatedDiagnosticSpan, Severity};
 pub use serialize::{SerializeOptions, serialize_value, serialize_value_with_options};
-pub use source::{DuplicateKey, FileId, LumaSource, Offset, SourcePosition, Span, Spanned};
+pub use source::{
+    DuplicateKey, FileId, LumaSource, Offset, SourcePosition, Span, Spanned, TextEdit, TextRange,
+    apply_text_edits,
+};
+pub use syntax_index::{SyntaxIndex, SyntaxKind, SyntaxNodeId, SyntaxNodeInfo};
 pub use token::{Token, TokenKind};
 pub use value::{
     LumaHostValue, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaSequence,

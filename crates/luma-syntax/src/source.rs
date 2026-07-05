@@ -58,7 +58,11 @@ impl Span {
     /// Returns whether this span overlaps `other`.
     #[must_use]
     pub fn intersects(self, other: Self) -> bool {
-        self.file_id == other.file_id && self.start < other.end && other.start < self.end
+        if self.file_id != other.file_id {
+            return false;
+        }
+
+        self.start < other.end && other.start < self.end
     }
 
     /// Returns this span as a byte range.
@@ -84,6 +88,92 @@ pub struct SourcePosition {
     pub line: usize,
     /// One-based column number.
     pub column: usize,
+}
+
+/// Source-relative half-open byte range intended for text edits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct TextRange {
+    /// Inclusive starting byte offset.
+    pub start: Offset,
+    /// Exclusive ending byte offset.
+    pub end: Offset,
+}
+
+impl TextRange {
+    /// Creates a new text range.
+    #[must_use]
+    pub const fn new(start: Offset, end: Offset) -> Self {
+        Self { start, end }
+    }
+
+    /// Returns the range length in bytes.
+    #[must_use]
+    pub const fn len(self) -> Offset {
+        self.end.saturating_sub(self.start)
+    }
+
+    /// Returns whether the range is empty.
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        self.start >= self.end
+    }
+
+    /// Returns this range as a byte range.
+    #[must_use]
+    pub const fn byte_range(self) -> Range<Offset> {
+        self.start..self.end
+    }
+
+    /// Converts this text range into a file-aware span.
+    #[must_use]
+    pub const fn to_span(self, file_id: FileId) -> Span {
+        Span::new(file_id, self.start, self.end)
+    }
+
+    /// Converts a file-aware span into a source-relative text range.
+    #[must_use]
+    pub const fn from_span(span: Span) -> Self {
+        Self::new(span.start, span.end)
+    }
+}
+
+/// Replace edit for a source buffer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextEdit {
+    /// Replaced range.
+    pub range: TextRange,
+    /// Replacement text.
+    pub text: String,
+}
+
+/// Applies a sorted, non-overlapping edit list to `source`.
+#[must_use]
+pub fn apply_text_edits(source: &str, edits: &[TextEdit]) -> Option<String> {
+    if edits.is_empty() {
+        return Some(source.to_owned());
+    }
+
+    let mut out = String::with_capacity(source.len());
+    let mut cursor = 0;
+
+    for edit in edits {
+        let range = edit.range.byte_range();
+        if range.start < cursor
+            || range.start > range.end
+            || range.end > source.len()
+            || !source.is_char_boundary(range.start)
+            || !source.is_char_boundary(range.end)
+        {
+            return None;
+        }
+
+        out.push_str(&source[cursor..range.start]);
+        out.push_str(&edit.text);
+        cursor = range.end;
+    }
+
+    out.push_str(&source[cursor..]);
+    Some(out)
 }
 
 /// Source buffer plus a lightweight line index.
@@ -126,7 +216,7 @@ impl LumaSource {
 
     /// Clamps `offset` down to the nearest valid UTF-8 boundary at or before it.
     #[must_use]
-    pub fn clamp_byte_offset(self: &Self, offset: Offset) -> Offset {
+    pub fn clamp_byte_offset(&self, offset: Offset) -> Offset {
         let clamped = offset.min(self.text.len());
         let mut boundary = clamped;
 
@@ -189,7 +279,11 @@ impl LumaSource {
     /// Converts a span belonging to this source into a source-relative byte range.
     #[must_use]
     pub fn span_to_byte_range(&self, span: Span) -> Option<Range<Offset>> {
-        if span.file_id != self.id || span.start > span.end || span.end > self.text.len() {
+        if span.file_id != self.id {
+            return None;
+        }
+
+        if span.start > span.end || span.end > self.text.len() {
             return None;
         }
 
@@ -226,7 +320,7 @@ impl LumaSource {
 
 #[cfg(test)]
 mod tests {
-    use super::{FileId, LumaSource, Span};
+    use super::{FileId, LumaSource, Span, TextEdit, TextRange, apply_text_edits};
 
     #[test]
     fn span_containment_and_intersection_are_half_open() {
@@ -289,6 +383,25 @@ mod tests {
             Some(Span::new(FileId(2), 1, 3))
         );
         assert_eq!(utf8.clamp_byte_span(Span::new(FileId(3), 2, 6)), None);
+    }
+
+    #[test]
+    fn text_edit_application_rewrites_source_relative_ranges() {
+        let edits = vec![
+            TextEdit {
+                range: TextRange::new(1, 4),
+                text: String::from("ello"),
+            },
+            TextEdit {
+                range: TextRange::new(4, 4),
+                text: String::from(" world"),
+            },
+        ];
+
+        assert_eq!(
+            apply_text_edits("hayo!", &edits),
+            Some(String::from("hello world!"))
+        );
     }
 }
 
