@@ -1,4 +1,4 @@
-# luma
+# LUMA
 
 **Luma** stands for **Lua Unified Model Assembly**: a Lua-adjacent markup language for
 structured documents that can stay pure data, or be assembled and evaluated with
@@ -8,7 +8,7 @@ Luma is built as a Rust workspace with a hard boundary between parsing and
 execution. You can parse, format, inspect, and serialize Luma without linking a
 Lua runtime. Evaluation is opt-in, backend-neutral, and capability-based.
 
-## Why Luma
+## Why LUMA
 
 - Data-first syntax for ordered maps, lists, scalars, comments, and multiline
   text.
