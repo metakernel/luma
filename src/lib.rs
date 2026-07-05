@@ -90,6 +90,9 @@ pub use luma_parser as parser;
 #[cfg(feature = "serde")]
 pub use luma_serde as serde;
 
+#[cfg(feature = "lumba")]
+pub use luma_lumba as lumba;
+
 #[cfg(feature = "runtime")]
 pub use luma_runtime as runtime;
 
@@ -101,8 +104,8 @@ pub use luma_engine_omnilua as engine_omnilua;
 
 #[cfg(feature = "syntax")]
 pub use luma_syntax::{
-    Diagnostic, Document as LumaDocument, LumaValue, SyntaxIndex, SyntaxKind, SyntaxNodeId,
-    SyntaxNodeInfo,
+    Diagnostic, Document as LumaDocument, LumaNull, LumaValue, SyntaxIndex, SyntaxKind,
+    SyntaxNodeId, SyntaxNodeInfo,
 };
 
 #[cfg(feature = "parser")]
