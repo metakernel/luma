@@ -55,21 +55,26 @@ assert_eq!(result.formatted.text, "name: api\n");
 
 ```rust
 use luma::engine_omnilua::OmniLuaEngine;
-use luma::eval::{AstEvaluator, EvaluationOptions};
+use luma::eval::{AstEvaluator, EvaluationOptions, EvaluationProfile};
 use luma::parser::{FileId, parse_str};
+use luma::runtime::RuntimeLimits;
 
 let parsed = parse_str(FileId(1), "calc.luma", "value: =21 * 2\n");
 let engine = OmniLuaEngine::default();
+let profile = EvaluationProfile::permissive(RuntimeLimits::unbounded());
 let evaluator = AstEvaluator {
     engine: &engine,
-    options: EvaluationOptions::default(),
+    options: EvaluationOptions {
+        profile: &profile,
+        ..EvaluationOptions::default()
+    },
 };
 
 let values = evaluator.evaluate_file(&parsed.file, "calc.luma", None)?;
 # Ok::<(), luma::eval::EvaluationError>(())
 ```
 
-`EvaluationOptions::default()` is intentionally minimal:
+`EvaluationOptions::default()` is intentionally minimal and may fail closed on backends that cannot enforce every restricted runtime limit:
 
 - restricted profile
 - no resolver

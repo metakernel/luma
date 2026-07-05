@@ -41,11 +41,13 @@ cargo run -p luma-cli -- check app.luma --evaluate --emit value --engine omnilua
 
 Parse and evaluate.
 
-```sh
+```powershell
 cargo run -p luma-cli --features engine-omnilua -- eval app.luma --emit value --engine omnilua
 ```
 
 If the CLI is built without an evaluation backend, eval returns a stable diagnostic explaining that an engine feature is required.
+
+`luma-cli` uses `EvaluationOptions::default()`, which means restricted evaluation. The current OmniLua backend fails closed when restricted sandbox limits cannot be enforced, so this command is useful as a backend/diagnostic smoke path rather than a turnkey execution profile.
 
 `--emit` values:
 

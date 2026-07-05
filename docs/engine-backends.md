@@ -26,14 +26,21 @@ luma = { version = "0.1", features = ["eval", "engine-omnilua"] }
 
 ```rust
 use luma::engine_omnilua::OmniLuaEngine;
-use luma::eval::{AstEvaluator, EvaluationOptions};
+use luma::eval::{AstEvaluator, EvaluationOptions, EvaluationProfile};
+use luma::runtime::RuntimeLimits;
 
 let engine = OmniLuaEngine::default();
+let profile = EvaluationProfile::permissive(RuntimeLimits::unbounded());
 let evaluator = AstEvaluator {
     engine: &engine,
-    options: EvaluationOptions::default(),
+    options: EvaluationOptions {
+        profile: &profile,
+        ..EvaluationOptions::default()
+    },
 };
 ```
+
+If you keep `EvaluationOptions::default()`, evaluation stays fail-closed under the restricted profile. Backends that cannot enforce every sandbox limit must reject execution instead of silently weakening the policy.
 
 ## Backend implementor guide
 

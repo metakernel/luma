@@ -30,16 +30,21 @@ Parser APIs are **engine-agnostic** and safe by default: parsing and formatting 
 
 ```rust
 use luma::engine_omnilua::OmniLuaEngine;
-use luma::eval::{AstEvaluator, EvaluationOptions};
+use luma::eval::{AstEvaluator, EvaluationOptions, EvaluationProfile};
 use luma::parser::{FileId, parse_str};
+use luma::runtime::RuntimeLimits;
 
 let parsed = parse_str(FileId(1), "example.luma", "answer: =40 + 2\n");
 assert!(parsed.diagnostics.is_empty());
 
 let engine = OmniLuaEngine::default();
+let profile = EvaluationProfile::permissive(RuntimeLimits::unbounded());
 let evaluator = AstEvaluator {
     engine: &engine,
-    options: EvaluationOptions::default(),
+    options: EvaluationOptions {
+        profile: &profile,
+        ..EvaluationOptions::default()
+    },
 };
 
 let documents = evaluator
@@ -61,9 +66,10 @@ luma = { version = "0.1", features = ["eval", "engine-omnilua"] }
 ```powershell
 cargo run -p luma-cli -- parse examples/app.luma --emit ast
 cargo run -p luma-cli -- fmt examples/app.luma
-cargo run -p luma-cli -- eval examples/app.luma --emit value
 cargo run -p luma-cli -- conformance --all-features
 ```
+
+`luma-cli eval` uses restricted evaluation defaults. The current OmniLua backend fails closed when asked to enforce unsupported sandbox limits, so hosts that want executable evaluation should use the library API and choose an explicit profile.
 
 ## Safety model
 
