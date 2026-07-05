@@ -184,6 +184,21 @@ Level 4 is the recommended minimum for build artifacts.
 
 Level 5 is optional and must be treated as trusted or capability-gated.
 
+### 5.1 Current `luma-lumba` draft 0.1 implementation matrix
+
+The current workspace implementation treats every level as **inert data support**, not execution support.
+
+| Level | Status in `luma-lumba` | Notes |
+| --- | --- | --- |
+| 0 | implemented | header/section table/footer/metadata verification |
+| 1 | implemented | portable values, document stream, canonical value-image helpers |
+| 2 | implemented | tags, schemas, diagnostics, policy-gated trusted content |
+| 3 | implemented | source, spans, syntax, trivia for editor-oriented images |
+| 4 | implemented | dependency and embedded-resource bundle sections, still inert |
+| 5 | implemented as inert descriptors | capability/runtime sections are stored/inspected only; no evaluation occurs during load |
+
+Public/default policy remains parse-only: loading, decoding, inspecting, and verifying must not execute Lua.
+
 ---
 
 ## 6. Terminology
@@ -1427,6 +1442,8 @@ A section using a nonzero codec must declare the corresponding extension in `EXT
 
 Canonical LUMBA should use no compression. Distribution LUMBA may use compression.
 
+Implementation note: the current `luma-lumba` reader/writer supports codec ID `0` (`none`) only. Other codec IDs remain draft extension points and are rejected when required.
+
 ---
 
 ## 32. Checksums
@@ -1606,6 +1623,15 @@ Recommended default limits:
 
 Hosts should lower these limits for untrusted input.
 
+The current public API/CLI preset is intentionally much lower than the broad draft suggestions above:
+
+- max input bytes: 8 MiB
+- max decoded logical bytes per section: 16 MiB
+- max stored section payload bytes: 2 MiB
+- max blob display bytes: 64 KiB
+- max JSON output bytes: 8 MiB
+- trust policy: public by default
+
 ---
 
 ## 37. Versioning
@@ -1676,6 +1702,18 @@ Example:
 
 - invalid varint is a format error;
 - trusted-only bytecode rejected by a safe host is a policy error.
+
+Known draft 0.1 implementation caveats:
+
+- deterministic `editor-cache` / `fixture` section inspection can report `LB0017` for known non-canonical ordering cases
+- fuzzing support currently has compile-checked scaffolding in the workspace; runtime `cargo fuzz` still depends on host/toolchain sanitizer support
+- no-execution guarantees apply even when Level 5 capability/runtime sections are present; those sections are descriptive only until a separate host policy chooses to evaluate related source
+
+Open questions for future drafts:
+
+- which compressed codecs, if any, should become part of the interoperable core profile beyond codec `0`
+- whether canonical ordering rules for syntax-heavy images should become stricter for fixture/editor-cache interoperability
+- how trusted bytecode or signed-extension stories should be standardized without weakening the no-execution-by-default contract
 
 ---
 
@@ -1811,11 +1849,14 @@ DIAG
 DEPS
 ```
 
-Recommended flags:
+Recommended header flags:
 
 ```text
+HAS_VALUES
 HAS_SOURCE
 HAS_SYNTAX
+HAS_DIAGNOSTICS
+VALUE_IMAGE
 SYNTAX_IMAGE
 ```
 
@@ -1869,6 +1910,17 @@ DIAG
 ```
 
 Fixture metadata should declare expected diagnostics, expected canonical text output, and expected value output.
+
+Recommended header flags:
+
+```text
+HAS_VALUES
+HAS_SOURCE
+HAS_SYNTAX
+HAS_DIAGNOSTICS
+VALUE_IMAGE
+SYNTAX_IMAGE
+```
 
 ---
 

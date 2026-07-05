@@ -173,12 +173,18 @@ serde = { version = "1", features = ["derive"] }
 luma = { version = "0.1", features = ["omnilua"] }
 ```
 
+```toml
+[dependencies]
+luma = { version = "0.1", features = ["lumba"] }
+```
+
 Feature guide:
 
 | Feature | Enables |
 | --- | --- |
 | `parser` | default parser, formatter, syntax types |
 | `serde` | `luma::serde::{to_value, to_string, from_value}` |
+| `lumba` | `luma::lumba` binary container reader/writer/verifier |
 | `eval` | backend-neutral evaluator and host extension traits |
 | `engine-omnilua` | optional OmniLua backend |
 | `omnilua` | ergonomic evaluation facade plus OmniLua backend |
@@ -195,6 +201,8 @@ cargo run -p luma-cli -- parse examples/app.luma --emit ast
 cargo run -p luma-cli -- fmt examples/app.luma
 cargo run -p luma-cli -- check examples/app.luma
 cargo run -p luma-cli -- conformance --all-features
+cargo run -p luma-cli --features lumba -- lumba inspect values.lumba --emit header
+cargo run -p luma-cli --features lumba -- lumba verify values.lumba
 ```
 
 Evaluation is intentionally restricted by default:
@@ -207,6 +215,10 @@ The CLI uses `EvaluationOptions::default()`. Backends that cannot enforce the
 restricted sandbox fail closed instead of silently weakening the policy, so host
 applications should use the library API when they need a deliberate execution
 profile, resolver, module registry, tag resolver, or schema validator.
+
+LUMBA commands are inert by default: `decode`, `inspect`, and `verify` never
+execute Lua, compile chunks, resolve imports, or activate host modules. `encode`
+accepts static portable values only and rejects runtime/eval constructs.
 
 ## Rust API
 
@@ -314,12 +326,39 @@ assert_eq!(documents.len(), 1);
 Use `Loader` for the ergonomic facade, or `luma::eval::AstEvaluator` when you
 need the lower-level evaluator directly.
 
+### Read and write LUMBA without execution
+
+```toml
+[dependencies]
+luma = { version = "0.1", features = ["lumba"] }
+```
+
+```rust
+use luma::lumba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
+
+let file = luma::lumba::LumbaFile::new().with_document(
+    Document::new().with_root_value(Value::String(String::from("hello"))),
+);
+
+let bytes = Writer::new(WriteOptions::new().with_limits(Limits::public())).write(&file)?;
+let decoded = Reader::new(ReadOptions::new().with_limits(Limits::public())).read(&bytes)?;
+
+assert_eq!(decoded.documents.len(), 1);
+# Ok::<(), luma::lumba::LumbaError>(())
+```
+
+`Reader` and `Writer` are binary container APIs only. They do not execute Lua.
+
 ## Safety model
 
 - Parser and syntax crates are engine-neutral and never execute Lua.
 - Evaluation is capability-based and deny-by-default.
 - `EvaluationOptions::default()` uses a restricted profile with no resolver, no
   module registry, no tag resolver, and no schema validator.
+- `luma::lumba::Limits::default()` is the public/untrusted-input preset:
+  8 MiB max input, 16 MiB max decoded logical section bytes, 2 MiB max stored
+  section payload, 64 KiB max blob display, 8 MiB max JSON output, and
+  `TrustPolicy::Public`.
 - Imports, includes, modules, tags, and schema validation require explicit host
   wiring.
 - Resolver policies reject parent traversal and network access unless the host
@@ -327,8 +366,21 @@ need the lower-level evaluator directly.
 - Restricted evaluation rejects obvious unsafe global or module names such as `_G`, `_ENV`,
   `io`, `os`, `debug`, `require`, `load`, metatable/raw APIs, coroutine APIs,
   FFI/JIT hooks, and nondeterministic calls such as `math.random`.
+- LUMBA readers reject trusted-only sections under the public policy with
+  `LB0019`; `--trusted` / `Limits::trusted()` widen inspection limits but still
+  do not execute stored source.
 
 See `docs/security.md` for the detailed trust model.
+
+## LUMBA draft 0.1 status
+
+- opt-in only: `luma = { features = ["lumba"] }`
+- supports draft Level 0-5 section families as inert data/model constructs
+- CLI writer modes: `value`, `runtime-data`, `editor-cache`, `bundle`, `fixture`,
+  plus relaxed/strict canonical output
+- current caveats: compression support is currently codec `0` only; trusted-only
+  inspection is policy-gated; deterministic section inspection can report
+  `LB0017` for known editor-cache/fixture ordering cases
 
 ## Workspace layout
 

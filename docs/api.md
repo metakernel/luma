@@ -9,6 +9,7 @@
 - `luma::runtime`
 - `luma::eval`
 - `luma::serde`
+- `luma::lumba`
 - `luma::engine_omnilua`
 - `luma::tooling`
 
@@ -18,6 +19,7 @@ Feature highlights:
 
 - default features: `parser`
 - `serde = ["syntax", "dep:luma-serde"]` enables the facade Serde bridge as `luma::serde`
+- `lumba = ["syntax", "dep:luma-lumba"]` enables the inert binary companion API as `luma::lumba`
 - `eval` and backend features remain opt-in
 
 ## Syntax layer
@@ -234,6 +236,73 @@ Behavior:
 - permissive: caller-supplied limits, runtime-only outputs allowed
 
 Document metadata can also request Luma profiles such as `data`, `safe`, and `trusted`. The evaluator maps those declarations against the host profile policy and will reject `trusted` unless the active host profile is also named `trusted`.
+
+## LUMBA binary layer
+
+Enable the facade feature explicitly:
+
+```toml
+[dependencies]
+luma = { version = "0.1", features = ["lumba"] }
+```
+
+Primary types re-exported from `luma::lumba`:
+
+- `LumbaFile`, `Document`
+- `Reader`, `ReadOptions`
+- `Writer`, `WriteOptions`
+- `Value`
+- `Limits`
+- `WriterMode`, `CanonicalMode`, `TextReconstructionMode`
+- verifier API via `luma::lumba::verify::Verifier`
+- policy enums via `luma::lumba::policy::{TrustPolicy, ReservedFlagPolicy, ExtensionNamePolicy}`
+
+Minimal round-trip example:
+
+```rust
+use luma::lumba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
+
+let file = luma::lumba::LumbaFile::new().with_document(
+    Document::new().with_root_value(Value::String(String::from("hello"))),
+);
+
+let bytes = Writer::new(WriteOptions::new().with_limits(Limits::public())).write(&file)?;
+let decoded = Reader::new(ReadOptions::new().with_limits(Limits::public())).read(&bytes)?;
+
+assert_eq!(decoded.documents.len(), 1);
+# Ok::<(), luma::lumba::LumbaError>(())
+```
+
+Portable-value helpers are also available when you already have `luma::syntax::LumaValue` data:
+
+```rust
+use luma::LumaNull;
+use luma::LumaValue;
+
+let bytes = luma::lumba::try_to_lumba_value_image(&[LumaValue::Null(LumaNull)])?;
+let values = luma::lumba::try_from_lumba_value_image(&bytes)?;
+
+assert_eq!(values, vec![LumaValue::Null(LumaNull)]);
+# Ok::<(), luma::lumba::LumbaError>(())
+```
+
+Security/defaults:
+
+- `Reader` and `Verifier` are parse-only; they never execute Lua.
+- `Limits::default()` equals `Limits::public()`.
+- public/default trust rejects trusted-only content with `LB0019`.
+- current draft implementation supports only codec `0` (`none`) for actual payload decoding/writing; other codec IDs remain extension points.
+
+Writer modes exposed by the API:
+
+| Mode | Purpose |
+| --- | --- |
+| `WriterMode::Pretty` | value-focused human/default output |
+| `WriterMode::RuntimeData` | deterministic runtime data image |
+| `WriterMode::EditorCache` | source + syntax + trivia + diagnostics cache |
+| `WriterMode::BuildBundle` | inert bundle/dependency image |
+| `WriterMode::ConformanceFixture` | fixture/value+syntax expectations |
+| `WriterMode::Canonical(CanonicalMode::{Relaxed,Strict})` | canonicalized output policies |
 
 ## Extension points
 

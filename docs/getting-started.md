@@ -38,6 +38,16 @@ luma = { version = "0.1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 ```
 
+### Parser + LUMBA binary support
+
+```toml
+[dependencies]
+luma = { version = "0.1", features = ["lumba"] }
+```
+
+The `lumba` feature adds the inert binary container API as `luma::lumba`. It
+does not enable evaluation, Lua, or OmniLua.
+
 ## Parse a document
 
 ```rust
@@ -82,6 +92,25 @@ assert_eq!(text, "enabled: true\nname: api\n");
 
 The facade helpers are `luma::serde::to_value`, `to_string`, `to_string_with_options`, and `from_value`. Text serialization is canonical and requires string mapping keys.
 
+## Encode and decode LUMBA
+
+```rust
+use luma::lumba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
+
+let file = luma::lumba::LumbaFile::new().with_document(
+    Document::new().with_root_value(Value::String(String::from("hello"))),
+);
+
+let bytes = Writer::new(WriteOptions::new().with_limits(Limits::public())).write(&file)?;
+let decoded = Reader::new(ReadOptions::new().with_limits(Limits::public())).read(&bytes)?;
+
+assert_eq!(decoded.documents.len(), 1);
+# Ok::<(), luma::lumba::LumbaError>(())
+```
+
+LUMBA loading is parse-only and inert: no Lua execution, no chunk compilation,
+no resolver/module activation, and no automatic import handling.
+
 ## Evaluate with OmniLua
 
 ```rust
@@ -114,6 +143,10 @@ let values = evaluator.evaluate_file(&parsed.file, "calc.luma", None)?;
 - no schema validator
 - unknown tags rejected for schema-validated documents
 
+For LUMBA, `Limits::default()` equals `Limits::public()`: public trust policy,
+8 MiB max input, 16 MiB max decoded logical section bytes, 2 MiB max stored
+section payload, 64 KiB max blob display, and 8 MiB max JSON output.
+
 ## Add host capabilities explicitly
 
 Use these extension points only when needed:
@@ -125,3 +158,5 @@ Use these extension points only when needed:
 - custom `ProfilePolicy` for limits/output policy
 
 See `docs/api.md` and `docs/security.md`.
+
+For CLI workflows see `docs/cli.md`, especially `cargo run -p luma-cli --features lumba -- lumba ...`.

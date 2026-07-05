@@ -16,6 +16,17 @@ Luma is safe-by-default at both layers:
 - no schema validator
 - unknown tags rejected for schema-validated documents
 
+`luma::lumba::Limits::default()` configures the public LUMBA policy preset:
+
+- trust policy: public
+- max input bytes: 8 MiB
+- max decoded logical bytes per section: 16 MiB
+- max stored section payload bytes: 2 MiB
+- max blob display bytes: 64 KiB
+- max JSON/CLI output bytes: 8 MiB
+- reserved flags rejected
+- extension names warned on by default
+
 ## Resolver safety model
 
 `ResolverPolicy` defaults to `deny_all()`:
@@ -43,6 +54,17 @@ Restricted evaluation:
 - rejects host keys in deterministic mode
 
 The evaluator also rejects obviously unsafe global or module names such as `_G`, `_ENV`, `io`, `os`, `debug`, `require`, `load`, metatable/raw APIs, `coroutine`, `ffi`, `jit`, and known nondeterministic calls like `math.random`.
+
+## LUMBA safety model
+
+LUMBA is a binary container, not an execution format:
+
+- readers/verifiers never execute Lua
+- readers/verifiers never compile stored chunks
+- readers never resolve imports/includes/modules automatically
+- trusted-only content is rejected under the default public policy with `LB0019`
+- `--trusted` / `Limits::trusted()` widen policy gates for inert inspection only
+- current draft implementation decodes/writes codec `0` only; unsupported required codecs fail closed
 
 ## Extension points are explicit trust boundaries
 
