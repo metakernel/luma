@@ -379,8 +379,8 @@ See `docs/security.md` for the detailed trust model.
 - CLI writer modes: `value`, `runtime-data`, `editor-cache`, `bundle`, `fixture`,
   plus relaxed/strict canonical output
 - current caveats: compression support is currently codec `0` only; trusted-only
-  inspection is policy-gated; deterministic section inspection can report
-  `LB0017` for known editor-cache/fixture ordering cases
+  inspection is policy-gated; fuzz runtime execution depends on host/toolchain
+  sanitizer support
 
 ## Workspace layout
 

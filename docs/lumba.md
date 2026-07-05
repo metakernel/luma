@@ -1705,14 +1705,13 @@ Example:
 
 Known draft 0.1 implementation caveats:
 
-- deterministic `editor-cache` / `fixture` section inspection can report `LB0017` for known non-canonical ordering cases
 - fuzzing support currently has compile-checked scaffolding in the workspace; runtime `cargo fuzz` still depends on host/toolchain sanitizer support
 - no-execution guarantees apply even when Level 5 capability/runtime sections are present; those sections are descriptive only until a separate host policy chooses to evaluate related source
 
 Open questions for future drafts:
 
 - which compressed codecs, if any, should become part of the interoperable core profile beyond codec `0`
-- whether canonical ordering rules for syntax-heavy images should become stricter for fixture/editor-cache interoperability
+- whether additional syntax-heavy image profiles should define stricter canonical interoperability requirements
 - how trusted bytecode or signed-extension stories should be standardized without weakening the no-execution-by-default contract
 
 ---

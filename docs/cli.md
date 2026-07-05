@@ -147,7 +147,6 @@ Oversized decode/inspect output is bounded by the active limits preset. The CLI 
 Supported draft coverage in the current implementation is Level 0-5 section families, but with draft 0.1 caveats:
 
 - actual compression support is currently codec `0` only (`none`)
-- fixture/editor-cache section inspection can deterministically report `LB0017` for known non-canonical ordering cases
 - oversized `values`/`resources`/`capabilities` output is summarized or rejected by the active limits preset rather than streamed unbounded
 
 ## No-subcommand mode
