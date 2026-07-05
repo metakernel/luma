@@ -27,7 +27,7 @@ Core data syntax parses without Lua. Anything that evaluates code or crosses a
 host boundary is explicit in the document and inert until the embedding host
 enables the corresponding evaluator capability.
 
-```luma
+```yaml
 -- Version, profile, and metadata directives are explicit document controls.
 @luma 0.1
 @profile safe
