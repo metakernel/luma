@@ -200,6 +200,10 @@ fn omnilua_safe_defaults_block_escape_hatches_and_secret_access() {
         "return os.getenv('TOKEN')",
         "return io.open('secret')",
         "collectgarbage()",
+        "return math.random()",
+        "return math.randomseed(1)",
+        "return math['random']()",
+        "return math['randomseed'](1)",
         "math.abs = nil",
     ] {
         let error = eval_chunk(&engine, &mut environment, script, span, &limits).unwrap_err();

@@ -127,7 +127,7 @@ fn sanitize_globals(lua: &Lua) -> Result<(), LuaRuntimeError> {
             "tostring", "type", "_VERSION",
         ],
     )?;
-    let safe_math = capture_namespace(&globals, "math")?;
+    let safe_math = capture_namespace_except(&globals, "math", &["random", "randomseed"])?;
     let safe_string = capture_namespace(&globals, "string")?;
     let safe_table = capture_namespace(&globals, "table")?;
     let safe_utf8 = capture_namespace(&globals, "utf8")?;
@@ -186,6 +186,14 @@ fn capture_globals(
 }
 
 fn capture_namespace(globals: &Table, name: &str) -> Result<Vec<(String, Value)>, LuaRuntimeError> {
+    capture_namespace_except(globals, name, &[])
+}
+
+fn capture_namespace_except(
+    globals: &Table,
+    name: &str,
+    excluded_names: &[&str],
+) -> Result<Vec<(String, Value)>, LuaRuntimeError> {
     let table = globals.get::<_, Table>(name).map_err(|error| {
         environment_error(&error, &format!("failed to capture namespace '{name}'"))
     })?;
@@ -196,15 +204,27 @@ fn capture_namespace(globals: &Table, name: &str) -> Result<Vec<(String, Value)>
         })?
         .into_iter()
         .filter_map(|(key, value)| match key {
-            Value::String(key) => Some(key.to_str().map(|key| (key, value)).map_err(|error| {
-                environment_error(
-                    &error,
-                    &format!("failed to decode namespace key in '{name}'"),
-                )
-            })),
+            Value::String(key) => Some(
+                key.to_str()
+                    .map(|key| (key, value))
+                    .map_err(|error| {
+                        environment_error(
+                            &error,
+                            &format!("failed to decode namespace key in '{name}'"),
+                        )
+                    })
+                    .map(|(key, value)| {
+                        if excluded_names.contains(&key.as_str()) {
+                            None
+                        } else {
+                            Some((key, value))
+                        }
+                    }),
+            ),
             _ => None,
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(|entries| entries.into_iter().flatten().collect())
 }
 
 fn install_namespace(

@@ -109,6 +109,10 @@ fn safe_environment_hides_unsafe_globals_and_escape_hatches() {
         "return os.getenv('SECRET')",
         "return io.open('x')",
         "return os.execute('whoami')",
+        "return math.random()",
+        "return math.randomseed(1)",
+        "return math['random']()",
+        "return math['randomseed'](1)",
     ] {
         let error = eval_chunk(&engine, &mut environment, script, span, &limits).unwrap_err();
         assert_eq!(error.diagnostic.code.code(), "E0013", "script: {script}");
