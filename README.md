@@ -94,7 +94,7 @@ fragments/pipeline.luma
 lua/service_helpers.lua
 ```
 
-```luma
+```yaml
 -- app.luma
 @luma 0.1
 @profile safe
@@ -114,7 +114,7 @@ pipeline:
   @include "./fragments/pipeline.luma"
 ```
 
-```luma
+```yaml
 -- common/defaults.luma
 replicas: 3
 channel: stable
@@ -123,13 +123,13 @@ regions:
   - eu-west
 ```
 
-```luma
+```yaml
 -- fragments/service-base.luma
 owner: platform
 tier: backend
 ```
 
-```luma
+```yaml
 -- fragments/pipeline.luma
 - test
 - deploy
