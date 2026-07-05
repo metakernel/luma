@@ -46,6 +46,19 @@ pub struct CommandReport {
 }
 
 impl CommandReport {
+    #[cfg(feature = "lumba")]
+    #[allow(dead_code)]
+    pub fn human_failure(command: &'static str, text: impl Into<String>) -> Self {
+        Self {
+            command,
+            source: None,
+            diagnostics: Vec::new(),
+            payload: None,
+            human_text: Some(text.into()),
+            success: Some(false),
+        }
+    }
+
     #[cfg(not(feature = "engine-omnilua"))]
     pub fn diagnostic_only(
         command: &'static str,

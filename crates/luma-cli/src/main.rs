@@ -7,10 +7,14 @@ mod commands {
     pub mod conformance;
     pub mod eval;
     pub mod fmt;
+    #[cfg(feature = "lumba")]
+    pub mod lumba;
     pub mod parse;
 }
 
 use clap::{Parser, Subcommand};
+#[cfg(feature = "lumba")]
+use commands::lumba::LumbaArgs;
 use commands::{
     check::CheckArgs, conformance::ConformanceArgs, eval::EvalArgs, fmt::FmtArgs, parse::ParseArgs,
 };
@@ -45,6 +49,8 @@ enum Command {
     Check(CheckArgs),
     Fmt(FmtArgs),
     Conformance(ConformanceArgs),
+    #[cfg(feature = "lumba")]
+    Lumba(LumbaArgs),
 }
 
 fn main() {
@@ -69,6 +75,8 @@ fn run(cli: Cli) -> Result<CommandReport, output::CliError> {
         Some(Command::Check(args)) => commands::check::run(&args),
         Some(Command::Fmt(args)) => commands::fmt::run(&args),
         Some(Command::Conformance(args)) => commands::conformance::run(&args),
+        #[cfg(feature = "lumba")]
+        Some(Command::Lumba(args)) => commands::lumba::run(&args),
         None => commands::check::run(&CheckArgs {
             parse: ParseArgs {
                 input: cli.input.ok_or_else(|| output::CliError {
