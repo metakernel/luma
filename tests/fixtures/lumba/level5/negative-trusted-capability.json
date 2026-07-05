@@ -1,0 +1,7 @@
+{
+  "name": "negative-trusted-capability",
+  "kind": "policy-error",
+  "level": 5,
+  "expected_error": "LB0019",
+  "notes": "Trusted-only capability requirements must be rejected by public limits."
+}

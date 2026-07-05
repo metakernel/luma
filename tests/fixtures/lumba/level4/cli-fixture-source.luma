@@ -1,0 +1,6 @@
+bundle: fixture
+items:
+  - 1
+  - true
+meta:
+  note: checked-in cli fixture source

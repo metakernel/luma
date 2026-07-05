@@ -1,0 +1,7 @@
+{
+  "name": "invalid-refs",
+  "kind": "decode-error",
+  "expected_error": "LB0014",
+  "source": "Single-null Level 1 image with DOCS root reference mutated from 0 to 1.",
+  "notes": "Exercises invalid value-reference handling."
+}

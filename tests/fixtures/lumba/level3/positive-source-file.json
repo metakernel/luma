@@ -1,0 +1,6 @@
+{
+  "name": "positive-source-file",
+  "kind": "valid",
+  "level": 3,
+  "notes": "Inert source-file metadata references an embedded blob without filesystem access."
+}

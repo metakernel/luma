@@ -1,0 +1,6 @@
+{
+  "name": "multiple-documents",
+  "kind": "valid",
+  "documents": ["\"first\"", "[true, false]", "{ third: null }"],
+  "notes": "Three root documents in one minimal Level 1 image."
+}

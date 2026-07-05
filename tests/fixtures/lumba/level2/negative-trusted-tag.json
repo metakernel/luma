@@ -1,0 +1,7 @@
+{
+  "name": "negative-trusted-tag",
+  "kind": "policy-error",
+  "level": 2,
+  "expected_error": "LB0019",
+  "notes": "Trusted-only tag metadata must be rejected by public limits."
+}

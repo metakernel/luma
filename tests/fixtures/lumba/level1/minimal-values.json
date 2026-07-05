@@ -1,0 +1,6 @@
+{
+  "name": "minimal-values",
+  "kind": "valid",
+  "documents": ["null", "false", "true", "-7", "1.5", "\"hi\""],
+  "notes": "Canonical Level 1 minimal image covering basic scalar roots."
+}

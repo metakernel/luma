@@ -1,0 +1,7 @@
+{
+  "name": "negative-malformed-layout",
+  "kind": "decode-error",
+  "level": 0,
+  "expected_error": "LB0007",
+  "notes": "Corrupts a section payload offset past EOF to exercise structural bounds checks."
+}

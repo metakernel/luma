@@ -23,12 +23,21 @@ use luma_syntax::{
     MappingItem, SequenceItem,
 };
 
+pub fn tests_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests")
+}
+
+#[allow(dead_code)]
+pub fn fixtures_root() -> PathBuf {
+    tests_root().join("fixtures")
+}
+
 pub fn run_level(level: &str) {
     if !filter_matches(level, &env_csv("LUMA_CONFORMANCE_LEVEL")) {
         return;
     }
 
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let root = tests_root();
     let fixtures = load_level_fixtures(&root, level);
     let mut report = LevelReport::default();
 

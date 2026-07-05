@@ -1,0 +1,7 @@
+{
+  "name": "negative-private-source",
+  "kind": "policy-error",
+  "level": 3,
+  "expected_error": "LB0019",
+  "notes": "Private source metadata requires trusted limits."
+}

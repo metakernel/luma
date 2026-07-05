@@ -1,0 +1,7 @@
+{
+  "name": "invalid-varints",
+  "kind": "decode-error",
+  "expected_error": "LB0012",
+  "source": "DOCS payload begins with truncated varint byte 0x80.",
+  "notes": "Exercises malformed UVar decoding."
+}

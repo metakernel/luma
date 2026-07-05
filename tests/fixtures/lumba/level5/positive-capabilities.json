@@ -1,0 +1,6 @@
+{
+  "name": "positive-capabilities",
+  "kind": "valid",
+  "level": 5,
+  "notes": "Capability sets and inert runtime descriptors round-trip under trusted limits without executing Lua."
+}

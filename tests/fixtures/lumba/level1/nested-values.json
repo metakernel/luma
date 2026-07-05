@@ -1,0 +1,8 @@
+{
+  "name": "nested-values",
+  "kind": "valid",
+  "documents": [
+    "{ items: [1, { deep: true }], note: \"nested\" }"
+  ],
+  "notes": "Canonical nested mapping/sequence example."
+}

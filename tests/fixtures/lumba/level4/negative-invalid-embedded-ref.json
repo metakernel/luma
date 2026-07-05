@@ -1,0 +1,7 @@
+{
+  "name": "negative-invalid-embedded-ref",
+  "kind": "encode-error",
+  "level": 4,
+  "expected_error": "LB0014",
+  "notes": "Embedded resource table references a dependency or blob outside the available tables."
+}

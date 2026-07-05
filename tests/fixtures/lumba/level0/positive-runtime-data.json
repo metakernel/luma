@@ -1,0 +1,6 @@
+{
+  "name": "positive-runtime-data",
+  "kind": "valid",
+  "level": 0,
+  "notes": "Single-document canonical runtime-data container with static map content."
+}

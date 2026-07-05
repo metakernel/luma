@@ -1,0 +1,7 @@
+{
+  "name": "bad-section-layouts",
+  "kind": "decode-error",
+  "expected_error": "LB0007",
+  "source": "STRS section declares payload_offset=128 and stored_size=1, but the file ends at byte 128.",
+  "notes": "Exercises section payload bounds validation."
+}

@@ -1,0 +1,6 @@
+{
+  "name": "positive-tag-registry",
+  "kind": "valid",
+  "level": 2,
+  "notes": "Portable tagged value plus TAGS registry metadata stays inert on decode."
+}

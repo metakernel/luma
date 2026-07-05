@@ -1,0 +1,6 @@
+{
+  "name": "tags",
+  "kind": "valid",
+  "documents": ["!Thing \"alpha\"", "!Wrap { inner: !Leaf 2 }"],
+  "notes": "Tagged values with deterministic tag-string interning."
+}

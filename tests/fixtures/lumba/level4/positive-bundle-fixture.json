@@ -1,0 +1,6 @@
+{
+  "name": "positive-bundle-fixture",
+  "kind": "valid",
+  "level": 4,
+  "notes": "Bundle-style fixture covers dependencies, embedded resources, and structural signature coverage."
+}
