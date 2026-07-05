@@ -115,7 +115,7 @@ fn editor_cache_mode_emits_recommended_sections_and_flags() {
     assert_eq!(
         section_ids(&bytes),
         vec![
-            "META", "STRS", "SYMS", "BLOB", "VALS", "DOCS", "SRCF", "SRCS", "ASTN", "TRIV", "DIAG",
+            "META", "STRS", "SYMS", "BLOB", "VALS", "DOCS", "DIAG", "SRCF", "SRCS", "ASTN", "TRIV",
         ]
     );
 }
@@ -146,7 +146,7 @@ fn conformance_fixture_mode_emits_recommended_sections_and_flags() {
     assert_eq!(
         section_ids(&bytes),
         vec![
-            "META", "STRS", "SYMS", "VALS", "DOCS", "SRCF", "SRCS", "ASTN", "TRIV", "DIAG",
+            "META", "STRS", "SYMS", "VALS", "DOCS", "DIAG", "SRCF", "SRCS", "ASTN", "TRIV",
         ]
     );
 }
