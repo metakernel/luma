@@ -1,0 +1,21 @@
+[package]
+name = "luma-eval"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+luma-parser = { path = "../luma-parser" }
+luma-runtime = { path = "../luma-runtime" }
+luma-syntax = { path = "../luma-syntax" }
+
+[dev-dependencies]
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
