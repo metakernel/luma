@@ -4,7 +4,7 @@
 structured documents that can stay pure data, or be assembled and evaluated with
 explicit host capabilities.
 
-Luma is built as a Rust workspace with a hard boundary between parsing and
+LUMA is built as a Rust workspace with a hard boundary between parsing and
 execution. You can parse, format, inspect, and serialize Luma without linking a
 Lua runtime. Evaluation is opt-in, backend-neutral, and capability-based.
 
