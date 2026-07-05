@@ -16,6 +16,7 @@ syntax = ["dep:luma-syntax"]
 parser = ["syntax", "dep:luma-parser"]
 runtime = ["dep:luma-runtime"]
 eval = ["runtime", "dep:luma-eval"]
+omnilua = ["eval", "engine-omnilua"]
 engine-omnilua = ["runtime", "dep:luma-engine-omnilua"]
 cli = []
 
