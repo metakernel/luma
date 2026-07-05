@@ -21,7 +21,9 @@ pub(crate) fn parse_mapping_key(
     file_id: FileId,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<ParsedKey> {
-    let text = text.trim();
+    let raw = text;
+    let text = raw.trim();
+    let start = start + raw.find(text).unwrap_or(0);
     let span = Span::new(file_id, start, start + text.len());
     if text.is_empty() {
         diagnostics.push(diagnostic(DiagnosticCode::InvalidMappingKey, Some(span)));
@@ -70,6 +72,7 @@ pub(crate) fn parse_mapping_key(
         key: MappingKey::Plain {
             value: text.to_owned(),
             span,
+            value_span: span,
         },
         canonical: text.to_owned(),
         span,

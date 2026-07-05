@@ -135,6 +135,7 @@ mod tests {
         let tag = luma_syntax::LumaTag {
             name: LumaTagName {
                 value: String::from("env"),
+                span: Span::new(FileId(1), 1, 4),
             },
             span: Span::new(FileId(1), 0, 4),
         };
@@ -155,6 +156,7 @@ mod tests {
         let tag = luma_syntax::LumaTag {
             name: LumaTagName {
                 value: String::from("upper"),
+                span: Span::new(FileId(1), 1, 6),
             },
             span: Span::new(FileId(1), 0, 6),
         };

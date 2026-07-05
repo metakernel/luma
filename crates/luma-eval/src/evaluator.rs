@@ -931,8 +931,8 @@ fn bind_loop_values<E: LuaRuntimeEngine>(
     loop_item: &crate::control::LoopItem<'_>,
 ) -> Result<(), EvaluationError> {
     match bindings {
-        LoopBindings::One { value } => scope.bind_value(engine, value, loop_item.value),
-        LoopBindings::Two { key, value } => {
+        LoopBindings::One { value, .. } => scope.bind_value(engine, value, loop_item.value),
+        LoopBindings::Two { key, value, .. } => {
             if let Some(key_value) = &loop_item.key {
                 scope.bind_value(engine, key, key_value)?;
             }

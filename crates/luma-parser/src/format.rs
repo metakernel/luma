@@ -434,8 +434,8 @@ fn render_sequence_loop(
 
 fn render_loop_bindings(bindings: &LoopBindings) -> String {
     match bindings {
-        LoopBindings::One { value } => value.clone(),
-        LoopBindings::Two { key, value } => format!("{key}, {value}"),
+        LoopBindings::One { value, .. } => value.clone(),
+        LoopBindings::Two { key, value, .. } => format!("{key}, {value}"),
     }
 }
 

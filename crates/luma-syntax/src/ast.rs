@@ -4,6 +4,15 @@
 
 use crate::source::{DuplicateKey, Span};
 
+/// Identifier-like source text with a precise span.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Identifier {
+    /// Identifier text as written in source.
+    pub text: String,
+    /// Span of the identifier text only.
+    pub span: Span,
+}
+
 /// Root parsed file, which may contain a document stream.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LumaFile {
@@ -143,6 +152,8 @@ pub struct Comment {
 pub struct LumaTagName {
     /// Tag text without the leading `!`.
     pub value: String,
+    /// Span of the tag name text without the leading `!`.
+    pub span: Span,
 }
 
 /// Tag annotation.
@@ -214,6 +225,7 @@ pub enum MappingKey {
     Plain {
         value: String,
         span: Span,
+        value_span: Span,
     },
     Quoted(StringNode),
     Expression {
@@ -247,6 +259,8 @@ pub struct SpreadEntry {
 pub struct LetBinding {
     /// Binding name.
     pub name: String,
+    /// Span of the binding name text.
+    pub name_span: Span,
     /// Bound value.
     pub value: LumaNode,
     /// Source span.
@@ -289,8 +303,16 @@ pub struct ElseBranch<T> {
 /// Loop binding shape.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoopBindings {
-    One { value: String },
-    Two { key: String, value: String },
+    One {
+        value: String,
+        value_span: Span,
+    },
+    Two {
+        key: String,
+        key_span: Span,
+        value: String,
+        value_span: Span,
+    },
 }
 
 /// Loop block.
@@ -324,6 +346,8 @@ pub enum Directive {
 pub struct VersionDirective {
     /// Declared version text.
     pub version: String,
+    /// Span of the directive name text (`luma`).
+    pub name_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -342,6 +366,8 @@ pub enum LumaProfile {
 pub struct ProfileDirective {
     /// Declared profile.
     pub profile: LumaProfile,
+    /// Span of the directive name text (`profile`).
+    pub name_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -351,6 +377,8 @@ pub struct ProfileDirective {
 pub struct SchemaDirective {
     /// Schema location.
     pub location: StringNode,
+    /// Span of the directive name text (`schema`).
+    pub name_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -362,6 +390,10 @@ pub struct ImportDirective {
     pub location: StringNode,
     /// Imported binding alias.
     pub alias: String,
+    /// Span of the directive name text (`import`).
+    pub name_span: Span,
+    /// Span of the alias text only.
+    pub alias_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -371,6 +403,8 @@ pub struct ImportDirective {
 pub struct IncludeDirective {
     /// Included URI or host reference.
     pub location: StringNode,
+    /// Span of the directive name text (`include`).
+    pub name_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -382,6 +416,12 @@ pub struct UseDirective {
     pub module: String,
     /// Module alias.
     pub alias: String,
+    /// Span of the directive name text (`use`).
+    pub name_span: Span,
+    /// Span of the host module text only.
+    pub module_span: Span,
+    /// Span of the alias text only.
+    pub alias_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -391,6 +431,8 @@ pub struct UseDirective {
 pub struct LuaPreludeDirective {
     /// Prelude Lua block.
     pub block: LuaExpression,
+    /// Span of the directive name text (`lua`).
+    pub name_span: Span,
     /// Source span.
     pub span: Span,
 }
@@ -400,6 +442,8 @@ pub struct LuaPreludeDirective {
 pub struct MetaDirective {
     /// Metadata mapping payload.
     pub value: MappingBlock,
+    /// Span of the directive name text (`meta`).
+    pub name_span: Span,
     /// Source span.
     pub span: Span,
 }

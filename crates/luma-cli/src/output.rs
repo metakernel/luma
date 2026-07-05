@@ -375,7 +375,7 @@ fn sequence_item_to_json(item: &SequenceItem) -> Value {
 
 fn mapping_key_to_json(key: &luma_parser::MappingKey) -> Value {
     match key {
-        luma_parser::MappingKey::Plain { value, span } => {
+        luma_parser::MappingKey::Plain { value, span, .. } => {
             json!({"type":"plain","value":value,"span": span_to_json(*span, None)})
         }
         luma_parser::MappingKey::Quoted(value) => {
@@ -423,8 +423,8 @@ fn loop_sequence_to_json(block: &LoopBlock<SequenceBlock>) -> Value {
 
 fn loop_bindings_to_json(bindings: &LoopBindings) -> Value {
     match bindings {
-        LoopBindings::One { value } => json!({"type":"one","value": value}),
-        LoopBindings::Two { key, value } => json!({"type":"two","key": key, "value": value}),
+        LoopBindings::One { value, .. } => json!({"type":"one","value": value}),
+        LoopBindings::Two { key, value, .. } => json!({"type":"two","key": key, "value": value}),
     }
 }
 

@@ -697,8 +697,8 @@ fn comment_kind(comment: &luma_syntax::Comment) -> &'static str {
 
 fn loop_bindings<T>(block: &luma_syntax::LoopBlock<T>) -> String {
     match &block.bindings {
-        luma_syntax::LoopBindings::One { value } => format!("value={value}"),
-        luma_syntax::LoopBindings::Two { key, value } => format!("key={key} value={value}"),
+        luma_syntax::LoopBindings::One { value, .. } => format!("value={value}"),
+        luma_syntax::LoopBindings::Two { key, value, .. } => format!("key={key} value={value}"),
     }
 }
 

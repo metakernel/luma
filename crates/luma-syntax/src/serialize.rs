@@ -336,6 +336,7 @@ mod tests {
             tag: LumaTag {
                 name: LumaTagName {
                     value: String::from("Float"),
+                    span: Span::new(FileId(1), 1, 6),
                 },
                 span: Span::new(FileId(1), 0, 0),
             },

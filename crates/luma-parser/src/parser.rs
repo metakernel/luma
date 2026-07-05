@@ -393,9 +393,21 @@ impl Parser {
                         items.push(MappingItem::Conditional(conditional));
                         index = next;
                     }
-                    DirectiveParse::For { bindings, iterable } => {
+                    DirectiveParse::For {
+                        bindings,
+                        bindings_span,
+                        iterable,
+                        iterable_start,
+                    } => {
                         let (loop_block, next) =
-                            self.parse_mapping_loop(index, indent, &bindings, &iterable);
+                            self.parse_mapping_loop(
+                                index,
+                                indent,
+                                &bindings,
+                                bindings_span,
+                                &iterable,
+                                iterable_start,
+                            );
                         last_end = loop_block.span.end;
                         items.push(MappingItem::Loop(loop_block));
                         index = next;
@@ -538,9 +550,21 @@ impl Parser {
                         items.push(SequenceItem::Conditional(conditional));
                         index = next;
                     }
-                    DirectiveParse::For { bindings, iterable } => {
+                    DirectiveParse::For {
+                        bindings,
+                        bindings_span,
+                        iterable,
+                        iterable_start,
+                    } => {
                         let (loop_block, next) =
-                            self.parse_sequence_loop(index, indent, &bindings, &iterable);
+                            self.parse_sequence_loop(
+                                index,
+                                indent,
+                                &bindings,
+                                bindings_span,
+                                &iterable,
+                                iterable_start,
+                            );
                         last_end = loop_block.span.end;
                         items.push(SequenceItem::Loop(loop_block));
                         index = next;
@@ -677,13 +701,33 @@ impl Parser {
         let code = self.code(index).to_owned();
         let rest = code.trim_start_matches("let ");
         let start = self.lines[index].start + indent;
-        let (name, value, next) = if let Some((name, value_text)) = rest.split_once('=') {
-            let name = name.trim();
-            let value_start = start + code.find('=').unwrap_or(0) + 1;
+        let (name, name_span, value, next) = if let Some((raw_name, value_text)) = rest.split_once('=') {
+            let name = raw_name.trim();
+            let name_start = start + 4 + identifier_offset(name, raw_name);
+            if name.is_empty() {
+                self.diagnostics.push(diagnostic(
+                    DiagnosticCode::InvalidDirectiveSyntax,
+                    Some(self.line_span(index)),
+                ));
+            }
+            let value_start = start + 4 + raw_name.len() + 1 + (value_text.len() - value_text.trim_start().len());
             let (value, next) = self.parse_value(index, indent, value_text.trim(), value_start);
-            (name.to_owned(), value, next)
-        } else if let Some((name, _)) = rest.split_once(':') {
+            (
+                name.to_owned(),
+                Span::new(self.file_id(), name_start, name_start + name.len()),
+                value,
+                next,
+            )
+        } else if let Some((raw_name, _)) = rest.split_once(':') {
             let child = self.skip_blank(index + 1);
+            let name = raw_name.trim();
+            let name_start = start + 4 + identifier_offset(name, raw_name);
+            if name.is_empty() {
+                self.diagnostics.push(diagnostic(
+                    DiagnosticCode::InvalidDirectiveSyntax,
+                    Some(self.line_span(index)),
+                ));
+            }
             let (value, next) = if child < self.lines.len() && self.lines[child].indent > indent {
                 self.parse_nested_block(child, indent)
             } else {
@@ -694,7 +738,12 @@ impl Parser {
                     index + 1,
                 )
             };
-            (name.trim().to_owned(), value, next)
+            (
+                name.to_owned(),
+                Span::new(self.file_id(), name_start, name_start + name.len()),
+                value,
+                next,
+            )
         } else {
             self.diagnostics.push(diagnostic(
                 DiagnosticCode::InvalidDirectiveSyntax,
@@ -702,6 +751,7 @@ impl Parser {
             ));
             (
                 String::new(),
+                Span::new(self.file_id(), start + 4, start + 4),
                 LumaNode::Null {
                     span: self.line_span(index),
                 },
@@ -712,6 +762,7 @@ impl Parser {
             LetBinding {
                 span: Span::new(self.file_id(), start, value.span().end.max(start)),
                 name,
+                name_span,
                 value,
             },
             next,
@@ -1001,7 +1052,9 @@ impl Parser {
         index: usize,
         indent: usize,
         bindings: &str,
+        bindings_span: Span,
         iterable: &str,
+        iterable_start: usize,
     ) -> (LoopBlock<MappingBlock>, usize) {
         let child = self.skip_blank(index + 1);
         let (body, next) = if child < self.lines.len() && self.lines[child].indent > indent {
@@ -1023,12 +1076,8 @@ impl Parser {
         let end = body.span.end;
         (
             LoopBlock {
-                bindings: parse_loop_bindings(bindings),
-                iterable: inline_expression(
-                    iterable,
-                    self.lines[index].start + indent,
-                    self.file_id(),
-                ),
+                bindings: parse_loop_bindings(bindings, bindings_span),
+                iterable: inline_expression(iterable, iterable_start, self.file_id()),
                 body,
                 span: Span::new(self.file_id(), self.lines[index].start + indent, end),
             },
@@ -1041,7 +1090,9 @@ impl Parser {
         index: usize,
         indent: usize,
         bindings: &str,
+        bindings_span: Span,
         iterable: &str,
+        iterable_start: usize,
     ) -> (LoopBlock<SequenceBlock>, usize) {
         let child = self.skip_blank(index + 1);
         let (body, next) = if child < self.lines.len() && self.lines[child].indent > indent {
@@ -1062,12 +1113,8 @@ impl Parser {
         let end = body.span.end;
         (
             LoopBlock {
-                bindings: parse_loop_bindings(bindings),
-                iterable: inline_expression(
-                    iterable,
-                    self.lines[index].start + indent,
-                    self.file_id(),
-                ),
+                bindings: parse_loop_bindings(bindings, bindings_span),
+                iterable: inline_expression(iterable, iterable_start, self.file_id()),
                 body,
                 span: Span::new(self.file_id(), self.lines[index].start + indent, end),
             },
@@ -1269,17 +1316,30 @@ fn find_mapping_colon(text: &str) -> Option<usize> {
     None
 }
 
-fn parse_loop_bindings(text: &str) -> LoopBindings {
+fn parse_loop_bindings(text: &str, span: Span) -> LoopBindings {
     if let Some((key, value)) = text.split_once(',') {
+        let key = key.trim();
+        let value = value.trim();
+        let key_start = span.start + identifier_offset(key, text.split_once(',').map_or("", |(raw, _)| raw));
+        let value_start = span.start + text.find(value).unwrap_or(text.len());
         LoopBindings::Two {
-            key: key.trim().to_owned(),
-            value: value.trim().to_owned(),
+            key: key.to_owned(),
+            key_span: Span::new(span.file_id, key_start, key_start + key.len()),
+            value: value.to_owned(),
+            value_span: Span::new(span.file_id, value_start, value_start + value.len()),
         }
     } else {
+        let value = text.trim();
+        let value_start = span.start + identifier_offset(value, text);
         LoopBindings::One {
-            value: text.trim().to_owned(),
+            value: value.to_owned(),
+            value_span: Span::new(span.file_id, value_start, value_start + value.len()),
         }
     }
+}
+
+fn identifier_offset(trimmed: &str, raw: &str) -> usize {
+    raw.find(trimmed).unwrap_or(0)
 }
 
 fn document_item_end(item: &DocumentItem) -> usize {
@@ -1346,7 +1406,10 @@ impl MappingItemExt for MappingItem {
 
 #[cfg(test)]
 mod tests {
-    use luma_syntax::{DiagnosticCode, DocumentItem, FileId, LumaNode, MappingItem, StringStyle};
+    use luma_syntax::{
+        DiagnosticCode, Directive, DocumentItem, FileId, LoopBindings, LumaNode, MappingItem,
+        MappingKey, StringStyle,
+    };
 
     use super::parse_str;
 
@@ -1382,5 +1445,104 @@ mod tests {
                 .iter()
                 .any(|diagnostic| diagnostic.code == DiagnosticCode::DuplicateKey)
         );
+    }
+
+    #[test]
+    fn parses_exact_identifier_subspans() {
+        let source = concat!(
+            "let foo = 1\n",
+            "@import \"x\" as alias\n",
+            "@use module as alias\n",
+            "container:\n",
+            "  @for key, value in expr:\n",
+            "    plain_key: !tag\n",
+        );
+
+        let parsed = parse_str(FileId(1), "spans.luma", source);
+
+        assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+
+        let DocumentItem::Let(binding) = &parsed.file.documents[0].items[0] else {
+            panic!()
+        };
+        assert_eq!(binding.name, "foo");
+        assert_eq!(binding.name_span, luma_syntax::Span::new(FileId(1), 4, 7));
+
+        let DocumentItem::Directive(Directive::Import(import)) = &parsed.file.documents[0].items[1]
+        else {
+            panic!()
+        };
+        assert_eq!(import.alias, "alias");
+        assert_eq!(import.name_span, luma_syntax::Span::new(FileId(1), 13, 19));
+        assert_eq!(import.alias_span, luma_syntax::Span::new(FileId(1), 27, 32));
+
+        let DocumentItem::Directive(Directive::Use(usage)) = &parsed.file.documents[0].items[2]
+        else {
+            panic!()
+        };
+        assert_eq!(usage.module, "module");
+        assert_eq!(usage.module_span, luma_syntax::Span::new(FileId(1), 38, 44));
+        assert_eq!(usage.alias_span, luma_syntax::Span::new(FileId(1), 48, 53));
+
+        let DocumentItem::Root(LumaNode::Mapping(mapping)) = &parsed.file.documents[0].items[3] else {
+            panic!()
+        };
+        let MappingItem::Entry(container) = &mapping.items[0] else {
+            panic!()
+        };
+        let LumaNode::Mapping(container_body) = &container.value else {
+            panic!()
+        };
+        let MappingItem::Loop(loop_block) = &container_body.items[0] else {
+            panic!()
+        };
+        assert_eq!(loop_block.iterable.span, luma_syntax::Span::new(FileId(1), 86, 90));
+        match &loop_block.bindings {
+            LoopBindings::Two {
+                key,
+                key_span,
+                value,
+                value_span,
+            } => {
+                assert_eq!(key, "key");
+                assert_eq!(*key_span, luma_syntax::Span::new(FileId(1), 72, 75));
+                assert_eq!(value, "value");
+                assert_eq!(*value_span, luma_syntax::Span::new(FileId(1), 77, 82));
+            }
+            _ => panic!(),
+        }
+
+        let MappingItem::Entry(entry) = &loop_block.body.items[0] else {
+            panic!()
+        };
+        let MappingKey::Plain { value_span, .. } = &entry.key else {
+            panic!()
+        };
+        assert_eq!(*value_span, luma_syntax::Span::new(FileId(1), 96, 105));
+
+        let LumaNode::Tagged(tagged) = &entry.value else {
+            panic!()
+        };
+        assert_eq!(tagged.tag.span, luma_syntax::Span::new(FileId(1), 107, 111));
+        assert_eq!(tagged.tag.name.span, luma_syntax::Span::new(FileId(1), 108, 111));
+    }
+
+    #[test]
+    fn malformed_let_keeps_broad_binding_span() {
+        let parsed = parse_str(FileId(1), "bad-let.luma", "let = 1\n");
+
+        assert!(
+            parsed
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidDirectiveSyntax)
+        );
+
+        let DocumentItem::Let(binding) = &parsed.file.documents[0].items[0] else {
+            panic!()
+        };
+        assert_eq!(binding.name, "");
+        assert_eq!(binding.name_span, luma_syntax::Span::new(FileId(1), 4, 4));
+        assert_eq!(binding.span, luma_syntax::Span::new(FileId(1), 0, 7));
     }
 }

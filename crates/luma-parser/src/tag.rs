@@ -24,6 +24,7 @@ pub(crate) fn parse_tag_prefix(
         LumaTag {
             name: LumaTagName {
                 value: name.to_owned(),
+                span: Span::new(file_id, span_start + 1, span_end),
             },
             span: Span::new(file_id, span_start, span_end),
         },

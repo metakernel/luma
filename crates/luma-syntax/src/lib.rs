@@ -11,7 +11,7 @@ pub mod value;
 
 pub use ast::{
     BlockChomping, BlockKind, Comment, CommentKind, ConditionalBlock, ConditionalBranch, Directive,
-    Document, DocumentItem, ElseBranch, ImportDirective, IncludeDirective, LetBinding,
+    Document, DocumentItem, ElseBranch, Identifier, ImportDirective, IncludeDirective, LetBinding,
     LoopBindings, LoopBlock, LuaExpression, LuaPreludeDirective, LumaFile, LumaNode, LumaProfile,
     LumaTag, LumaTagName, MappingBlock, MappingEntry, MappingItem, MappingKey, MetaDirective,
     NumberNode, ProfileDirective, SchemaDirective, SequenceBlock, SequenceItem, SpreadEntry,

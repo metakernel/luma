@@ -36,10 +36,12 @@ impl<'de> ValueDeserializer<'de> {
                     value.kind
                 )
             },
-            |label| format!(
-                "cannot deserialize runtime-only Luma {kind} value `{}` ({label})",
-                value.kind
-            ),
+            |label| {
+                format!(
+                    "cannot deserialize runtime-only Luma {kind} value `{}` ({label})",
+                    value.kind
+                )
+            },
         ))
     }
 
@@ -1037,6 +1039,7 @@ mod tests {
             tag: LumaTag {
                 name: LumaTagName {
                     value: "Struct".to_owned(),
+                    span: Span::new(FileId::default(), 1, 7),
                 },
                 span: Span::new(FileId::default(), 0, 0),
             },
@@ -1060,6 +1063,7 @@ mod tests {
             tag: LumaTag {
                 name: LumaTagName {
                     value: "Ignored".to_owned(),
+                    span: Span::new(FileId::default(), 1, 8),
                 },
                 span: Span::new(FileId::default(), 0, 0),
             },
