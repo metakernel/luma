@@ -10,6 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 luma = { path = "..", features = ["parser", "syntax"] }
+luma-lumba = { path = "../crates/luma-lumba" }
 luma-parser = { path = "../crates/luma-parser" }
 luma-syntax = { path = "../crates/luma-syntax" }
 
@@ -23,6 +24,20 @@ bench = false
 [[bin]]
 name = "format"
 path = "fuzz_targets/format.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lumba_read"
+path = "fuzz_targets/lumba_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lumba_value"
+path = "fuzz_targets/lumba_value.rs"
 test = false
 doc = false
 bench = false
