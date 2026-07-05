@@ -6,6 +6,7 @@ Luma stands for **LUa Markup Assembly**: a Lua-adjacent markup language with an 
 
 - `luma`: public facade crate
 - `luma-syntax`: stable AST, value, span, and diagnostic types
+- `luma-serde`: Serde adapter for `LumaValue` and canonical text output
 - `luma-parser`: engine-agnostic parser/formatter
 - `luma-runtime`: backend-neutral runtime traits
 - `luma-eval`: engine-agnostic evaluator and host extension points
@@ -25,6 +26,36 @@ assert_eq!(parsed.file.documents.len(), 1);
 ```
 
 Parser APIs are **engine-agnostic** and safe by default: parsing and formatting do not require a Lua engine or runtime access.
+
+### Serialize Rust data to canonical Luma text
+
+Enable the facade Serde bridge with:
+
+```toml
+[dependencies]
+luma = { version = "0.1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+```
+
+```rust
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct Service<'a> {
+    name: &'a str,
+    replicas: i32,
+}
+
+let text = luma::serde::to_string(&Service {
+    name: "api",
+    replicas: 3,
+})?;
+
+assert_eq!(text, "name: api\nreplicas: 3\n");
+# Ok::<(), luma::serde::Error>(())
+```
+
+`luma::serde` re-exports the facade helpers `to_value`, `to_string`, `to_string_with_options`, and `from_value`. `to_string` emits canonical Luma text and requires string mapping keys.
 
 ### Evaluate with OmniLua
 

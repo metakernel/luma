@@ -4,6 +4,8 @@
 pub use crate::OmniLuaEngine;
 #[cfg(feature = "parser")]
 pub use crate::Parser;
+#[cfg(feature = "serde")]
+pub use crate::serde;
 pub use crate::version;
 #[cfg(feature = "syntax")]
 pub use crate::{Diagnostic, LumaDocument, LumaValue};

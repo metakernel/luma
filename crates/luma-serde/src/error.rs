@@ -67,7 +67,12 @@ impl fmt::Display for Error {
                 write!(formatter, "unsupported serde data: {operation}")
             }
             Self::Diagnostic(diagnostic) => {
-                write!(formatter, "{}: {}", diagnostic.code.code(), diagnostic.message)
+                write!(
+                    formatter,
+                    "{}: {}",
+                    diagnostic.code.code(),
+                    diagnostic.message
+                )
             }
         }
     }

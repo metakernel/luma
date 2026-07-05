@@ -14,6 +14,7 @@ categories = ["compilers", "development-tools"]
 default = ["parser"]
 syntax = ["dep:luma-syntax"]
 parser = ["syntax", "dep:luma-parser"]
+serde = ["syntax", "dep:luma-serde"]
 runtime = ["dep:luma-runtime"]
 eval = ["runtime", "dep:luma-eval"]
 omnilua = ["eval", "engine-omnilua"]
@@ -23,6 +24,7 @@ cli = []
 [dependencies]
 luma-syntax = { path = "crates/luma-syntax", optional = true }
 luma-parser = { path = "crates/luma-parser", optional = true }
+luma-serde = { path = "crates/luma-serde", optional = true }
 luma-runtime = { path = "crates/luma-runtime", optional = true }
 luma-eval = { path = "crates/luma-eval", optional = true }
 luma-engine-omnilua = { path = "crates/luma-engine-omnilua", optional = true }
@@ -33,6 +35,7 @@ members = [
     ".",
     "crates/luma-syntax",
     "crates/luma-parser",
+    "crates/luma-serde",
     "crates/luma-eval",
     "crates/luma-runtime",
     "crates/luma-engine-omnilua",
@@ -48,6 +51,7 @@ repository = "https://github.com/example/luma"
 
 [workspace.dependencies]
 omnilua = { version = "0.4.3" }
+serde = { version = "1", features = ["derive"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

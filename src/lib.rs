@@ -16,6 +16,17 @@
 //! assert!(parsed.diagnostics.is_empty());
 //! ```
 //!
+//! # Serialize with serde
+//!
+//! ```rust
+//! # #[cfg(feature = "serde")]
+//! # {
+//! use luma::serde::to_value;
+//!
+//! let _ = to_value("example");
+//! # }
+//! ```
+//!
 //! # Evaluate with OmniLua
 //!
 //! The `Loader` facade and `OmniLuaEngine` require a Lua runtime. The shortest
@@ -59,6 +70,9 @@ pub use luma_syntax as syntax;
 
 #[cfg(feature = "parser")]
 pub use luma_parser as parser;
+
+#[cfg(feature = "serde")]
+pub use luma_serde as serde;
 
 #[cfg(feature = "runtime")]
 pub use luma_runtime as runtime;

@@ -1,9 +1,11 @@
 //! Deserialization entry points and adapter types.
 
-use luma_syntax::{LumaKey, LumaMappingEntry, LumaNumber, LumaSequence, LumaTaggedValue, LumaValue};
-use serde::{Deserialize, forward_to_deserialize_any};
-use serde::de::{self, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
+use luma_syntax::{
+    LumaKey, LumaMappingEntry, LumaNumber, LumaSequence, LumaTaggedValue, LumaValue,
+};
 use serde::Deserializer as _;
+use serde::de::{self, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
+use serde::{Deserialize, forward_to_deserialize_any};
 
 use crate::{Error, Result};
 
@@ -32,7 +34,10 @@ impl<'de> ValueDeserializer<'de> {
                 "cannot deserialize runtime-only Luma {kind} value `{}` ({label})",
                 value.kind
             ),
-            None => format!("cannot deserialize runtime-only Luma {kind} value `{}`", value.kind),
+            None => format!(
+                "cannot deserialize runtime-only Luma {kind} value `{}`",
+                value.kind
+            ),
         })
     }
 
@@ -67,9 +72,13 @@ impl<'de> ValueDeserializer<'de> {
             LumaValue::Number(LumaNumber::Integer(value)) => visitor.visit_i64(*value),
             LumaValue::Number(LumaNumber::Float(value)) => visitor.visit_f64(*value),
             LumaValue::String(value) => visitor.visit_borrowed_str(value),
-            LumaValue::Sequence(sequence) => visitor.visit_seq(SequenceAccess::new(&sequence.items)),
+            LumaValue::Sequence(sequence) => {
+                visitor.visit_seq(SequenceAccess::new(&sequence.items))
+            }
             LumaValue::Mapping(mapping) => visitor.visit_map(MappingAccess::new(&mapping.entries)),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_any(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_any(visitor)
+            }
             LumaValue::Function(value) => Err(Self::runtime_only_error("function", value)),
             LumaValue::UserData(value) => Err(Self::runtime_only_error("userdata", value)),
             LumaValue::HostObject(value) => Err(Self::runtime_only_error("host object", value)),
@@ -101,7 +110,9 @@ impl<'de> ValueDeserializer<'de> {
         match self.value {
             LumaValue::Number(LumaNumber::Integer(value)) => visitor.visit_f64(*value as f64),
             LumaValue::Number(LumaNumber::Float(value)) => visitor.visit_f64(*value),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_float(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_float(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"a number")),
         }
     }
@@ -141,7 +152,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     {
         match self.value {
             LumaValue::Boolean(value) => visitor.visit_bool(*value),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_bool(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_bool(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"a boolean")),
         }
     }
@@ -186,7 +199,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        self.deserialize_integer(visitor, "an integer", |visitor, value| visitor.visit_i64(value))
+        self.deserialize_integer(visitor, "an integer", |visitor, value| {
+            visitor.visit_i64(value)
+        })
     }
 
     fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value>
@@ -284,7 +299,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
                     _ => Err(Error::custom("expected a single-character string")),
                 }
             }
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_char(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_char(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"a string")),
         }
     }
@@ -295,7 +312,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     {
         match self.value {
             LumaValue::String(value) => visitor.visit_borrowed_str(value),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_str(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_str(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"a string")),
         }
     }
@@ -327,7 +346,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     {
         match self.value {
             LumaValue::Null(_) => visitor.visit_none(),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_option(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_option(visitor)
+            }
             _ => visitor.visit_some(self),
         }
     }
@@ -338,7 +359,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     {
         match self.value {
             LumaValue::Null(_) => visitor.visit_unit(),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_unit(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_unit(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"null")),
         }
     }
@@ -365,7 +388,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
             LumaValue::Sequence(LumaSequence { items, .. }) => {
                 visitor.visit_seq(SequenceAccess::new(items))
             }
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_seq(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_seq(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"a sequence")),
         }
     }
@@ -395,7 +420,9 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     {
         match self.value {
             LumaValue::Mapping(mapping) => visitor.visit_map(MappingAccess::new(&mapping.entries)),
-            LumaValue::Tagged(tagged) => ValueDeserializer::new(&tagged.value).deserialize_map(visitor),
+            LumaValue::Tagged(tagged) => {
+                ValueDeserializer::new(&tagged.value).deserialize_map(visitor)
+            }
             other => Err(Self::mismatch_error(other, &"a mapping")),
         }
     }
@@ -422,11 +449,16 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
         V: Visitor<'de>,
     {
         match self.value {
-            LumaValue::String(variant) => visitor.visit_enum(EnumValueAccess::unit(variant.as_str())),
+            LumaValue::String(variant) => {
+                visitor.visit_enum(EnumValueAccess::unit(variant.as_str()))
+            }
             LumaValue::Mapping(mapping) if mapping.entries.len() == 1 => {
                 let entry = &mapping.entries[0];
                 let LumaKey::String(variant) = &entry.key else {
-                    return Err(Self::invalid_value(unexpected_key(&entry.key), &"a string enum variant name"));
+                    return Err(Self::invalid_value(
+                        unexpected_key(&entry.key),
+                        &"a string enum variant name",
+                    ));
                 };
                 visitor.visit_enum(EnumValueAccess::value(variant.as_str(), &entry.value))
             }
@@ -453,7 +485,6 @@ impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     {
         visitor.visit_unit()
     }
-
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -565,7 +596,9 @@ impl<'de> EnumAccess<'de> for EnumValueAccess<'de> {
     where
         V: de::DeserializeSeed<'de>,
     {
-        let variant = seed.deserialize(serde::de::value::StrDeserializer::<Error>::new(self.variant))?;
+        let variant = seed.deserialize(serde::de::value::StrDeserializer::<Error>::new(
+            self.variant,
+        ))?;
         Ok((variant, self))
     }
 }
@@ -648,7 +681,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
     {
         match self.key {
             LumaKey::Boolean(value) => visitor.visit_bool(*value),
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"a boolean key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"a boolean key",
+            )),
         }
     }
 
@@ -658,7 +694,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
     {
         match self.key {
             LumaKey::Number(LumaNumber::Integer(value)) => visitor.visit_i64(*value),
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"an integer key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"an integer key",
+            )),
         }
     }
 
@@ -672,7 +711,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
                     .map_err(|_| Error::custom("integer key out of range for target type"))?;
                 visitor.visit_u64(value)
             }
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"an unsigned integer key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"an unsigned integer key",
+            )),
         }
     }
 
@@ -683,7 +725,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
         match self.key {
             LumaKey::Number(LumaNumber::Integer(value)) => visitor.visit_f64(*value as f64),
             LumaKey::Number(LumaNumber::Float(value)) => visitor.visit_f64(*value),
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"a numeric key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"a numeric key",
+            )),
         }
     }
 
@@ -699,7 +744,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
                     _ => Err(Error::custom("expected a single-character string key")),
                 }
             }
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"a string key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"a string key",
+            )),
         }
     }
 
@@ -709,7 +757,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
     {
         match self.key {
             LumaKey::String(value) => visitor.visit_borrowed_str(value),
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"a string key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"a string key",
+            )),
         }
     }
 
@@ -738,7 +789,10 @@ impl<'de> serde::Deserializer<'de> for KeyDeserializer<'de> {
     {
         match self.key {
             LumaKey::String(value) => visitor.visit_enum(EnumValueAccess::unit(value)),
-            other => Err(ValueDeserializer::invalid_type(unexpected_key(other), &"a string key")),
+            other => Err(ValueDeserializer::invalid_type(
+                unexpected_key(other),
+                &"a string key",
+            )),
         }
     }
 
@@ -799,7 +853,10 @@ fn unexpected_key(key: &LumaKey) -> de::Unexpected<'_> {
 
 #[cfg(test)]
 mod tests {
-    use luma_syntax::{LumaHostValue, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaSequence, LumaTag, LumaTagName, LumaTaggedValue, LumaValue, Span};
+    use luma_syntax::{
+        LumaHostValue, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaSequence,
+        LumaTag, LumaTagName, LumaTaggedValue, LumaValue, Span,
+    };
     use serde::Deserialize;
 
     use super::from_value;
@@ -959,7 +1016,10 @@ mod tests {
             duplicate_keys: Vec::new(),
             span: None,
         });
-        assert_eq!(from_value::<ExampleEnum>(&tuple).unwrap(), ExampleEnum::Tuple(1, "two".to_owned()));
+        assert_eq!(
+            from_value::<ExampleEnum>(&tuple).unwrap(),
+            ExampleEnum::Tuple(1, "two".to_owned())
+        );
 
         let tagged = LumaValue::Tagged(LumaTaggedValue {
             tag: LumaTag {
@@ -979,7 +1039,10 @@ mod tests {
             })),
             span: None,
         });
-        assert_eq!(from_value::<ExampleEnum>(&tagged).unwrap(), ExampleEnum::Struct { count: 2 });
+        assert_eq!(
+            from_value::<ExampleEnum>(&tagged).unwrap(),
+            ExampleEnum::Struct { count: 2 }
+        );
 
         let transparent = LumaValue::Tagged(LumaTaggedValue {
             tag: LumaTag {
@@ -1010,14 +1073,25 @@ mod tests {
 
     #[test]
     fn reports_expected_type_and_range_errors() {
-        let bool_error = from_value::<bool>(&LumaValue::Number(LumaNumber::Integer(1))).unwrap_err();
-        assert_eq!(bool_error.to_string(), "invalid type: integer `1`, expected a boolean");
+        let bool_error =
+            from_value::<bool>(&LumaValue::Number(LumaNumber::Integer(1))).unwrap_err();
+        assert_eq!(
+            bool_error.to_string(),
+            "invalid type: integer `1`, expected a boolean"
+        );
 
-        let range_error = from_value::<u8>(&LumaValue::Number(LumaNumber::Integer(-1))).unwrap_err();
-        assert_eq!(range_error, Error::Custom("integer out of range for target type".to_owned()));
+        let range_error =
+            from_value::<u8>(&LumaValue::Number(LumaNumber::Integer(-1))).unwrap_err();
+        assert_eq!(
+            range_error,
+            Error::Custom("integer out of range for target type".to_owned())
+        );
 
         let char_error = from_value::<char>(&LumaValue::String("no".to_owned())).unwrap_err();
-        assert_eq!(char_error, Error::Custom("expected a single-character string".to_owned()));
+        assert_eq!(
+            char_error,
+            Error::Custom("expected a single-character string".to_owned())
+        );
     }
 
     #[test]

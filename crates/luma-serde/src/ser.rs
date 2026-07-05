@@ -7,8 +7,8 @@ use luma_syntax::{
 use serde::{
     Serialize,
     ser::{
-        self, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
-        SerializeTuple, SerializeTupleStruct, SerializeTupleVariant,
+        self, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
+        SerializeTupleStruct, SerializeTupleVariant,
     },
 };
 
@@ -403,11 +403,7 @@ impl serde::Serializer for ValueSerializer {
         Ok(MapSerializer::new(len))
     }
 
-    fn serialize_struct(
-        self,
-        _name: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         Ok(MapSerializer::new(Some(len)))
     }
 
@@ -721,11 +717,7 @@ impl ser::Serializer for &mut ValueSerializer {
         ValueSerializer.serialize_map(len)
     }
 
-    fn serialize_struct(
-        self,
-        name: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         ValueSerializer.serialize_struct(name, len)
     }
 
@@ -816,8 +808,14 @@ mod tests {
 
     #[test]
     fn serializes_primitive_conversions_exactly() {
-        assert_eq!(to_value(false).unwrap(), luma_syntax::LumaValue::Boolean(false));
-        assert_eq!(to_value('λ').unwrap(), luma_syntax::LumaValue::String("λ".to_owned()));
+        assert_eq!(
+            to_value(false).unwrap(),
+            luma_syntax::LumaValue::Boolean(false)
+        );
+        assert_eq!(
+            to_value('λ').unwrap(),
+            luma_syntax::LumaValue::String("λ".to_owned())
+        );
         assert_eq!(
             to_value(i128::from(i64::MIN)).unwrap(),
             luma_syntax::LumaValue::Number(luma_syntax::LumaNumber::Integer(i64::MIN))
@@ -885,8 +883,14 @@ mod tests {
 
     #[test]
     fn maps_none_and_unit_to_null_and_rejects_unsupported_values() {
-        assert_eq!(to_value(None::<u8>).unwrap(), luma_syntax::LumaValue::Null(LumaNull));
-        assert_eq!(to_value(()).unwrap(), luma_syntax::LumaValue::Null(LumaNull));
+        assert_eq!(
+            to_value(None::<u8>).unwrap(),
+            luma_syntax::LumaValue::Null(LumaNull)
+        );
+        assert_eq!(
+            to_value(()).unwrap(),
+            luma_syntax::LumaValue::Null(LumaNull)
+        );
 
         let bytes_error = to_value(BytesValue(b"abc")).unwrap_err();
         assert_eq!(

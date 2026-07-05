@@ -44,6 +44,11 @@ pub fn format_document_text_edit(
 }
 
 /// Serializes an evaluated portable value into canonical Luma text.
+///
+/// This remains the stable tooling entry point for callers that already work
+/// with `luma_syntax::LumaValue` directly. For typed Rust/Serde data models,
+/// prefer `luma_serde` or the facade helpers under `luma::serde` to produce a
+/// portable value first and then serialize it canonically.
 #[cfg(feature = "syntax")]
 pub fn serialize_portable_value(
     value: &luma_syntax::LumaValue,

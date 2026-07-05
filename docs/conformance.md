@@ -37,7 +37,12 @@ $env:LUMA_CONFORMANCE_LEVEL='level3'; $env:LUMA_CONFORMANCE_BACKEND='omnilua'; c
 
 - Level 0/1 verify parser conformance only.
 - Level 2/3 require the `eval` feature; OmniLua-specific coverage additionally requires `engine-omnilua`.
-- Level 4 verifies canonical formatting and portable serialization.
+- Level 4 verifies canonical formatting and portable-value serialization through
+  the tooling facade.
+- `luma::tooling::serialize_portable_value` intentionally remains the
+  `luma_syntax`-level wrapper for existing `LumaValue` users; typed Rust `serde`
+  entry points live in `luma-serde` / `luma::serde` and feed the same portable
+  value model rather than replacing this conformance surface.
 
 ## What conformance means here
 

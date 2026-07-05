@@ -5,6 +5,7 @@
 Luma means **LUa Markup Assembly**. The workspace is split so parsing is independent from evaluation:
 
 - parse/format with `luma-parser`
+- bridge Serde data with `luma-serde`
 - evaluate with `luma-eval`
 - plug in a backend through `luma-runtime`
 - use `luma-engine-omnilua` when you want a ready-made Lua engine
@@ -29,6 +30,14 @@ Default features enable `parser` only.
 luma = { version = "0.1", features = ["eval", "engine-omnilua"] }
 ```
 
+### Parser + Serde bridge
+
+```toml
+[dependencies]
+luma = { version = "0.1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+```
+
 ## Parse a document
 
 ```rust
@@ -50,6 +59,28 @@ let result = luma::parser::format_str(
 assert!(result.parsed.diagnostics.is_empty());
 assert_eq!(result.formatted.text, "name: api\n");
 ```
+
+## Serialize to canonical Luma text
+
+```rust
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct Config<'a> {
+    name: &'a str,
+    enabled: bool,
+}
+
+let text = luma::serde::to_string(&Config {
+    name: "api",
+    enabled: true,
+})?;
+
+assert_eq!(text, "enabled: true\nname: api\n");
+# Ok::<(), luma::serde::Error>(())
+```
+
+The facade helpers are `luma::serde::to_value`, `to_string`, `to_string_with_options`, and `from_value`. Text serialization is canonical and requires string mapping keys.
 
 ## Evaluate with OmniLua
 
