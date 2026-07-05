@@ -1,0 +1,5 @@
+title: Unknown directives are rejected
+mode: parse
+section: 29,36.1
+profile: any
+backend: parse

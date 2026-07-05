@@ -1,0 +1,5 @@
+title: Duplicate keys are rejected
+mode: parse
+section: 14.7
+profile: any
+backend: parse

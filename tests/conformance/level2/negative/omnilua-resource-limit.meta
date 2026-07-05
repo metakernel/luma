@@ -1,0 +1,8 @@
+title: Resource limits are surfaced
+mode: eval
+section: 17.1,36.1
+profile: safe
+backend: omnilua
+features: eval,engine-omnilua
+relaxed_limits: true
+max_table_entries: 2

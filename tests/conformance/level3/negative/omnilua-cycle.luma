@@ -1,0 +1,4 @@
+root: |lua
+  local t = {}
+  t.self = t
+  return t

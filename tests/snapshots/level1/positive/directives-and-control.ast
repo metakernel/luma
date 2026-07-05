@@ -1,0 +1,38 @@
+doc
+  directive version 0.1
+  directive profile safe
+  directive meta
+    entry title
+      string("Example")
+  let defaults
+    mapping
+      entry timeout
+        number(3)
+  root
+    mapping
+      entry service
+        tagged(!Service)
+          mapping
+            entry record
+              lua-expr-block("make_record()\n")
+            entry dynamic
+              lua-expr("defaults.timeout")
+            entry [expr:dynamic_key]
+              tagged(!Date)
+                string("2026-01-01")
+            conditional
+              if environment == "prod"
+                mapping
+                  entry debug
+                    bool(false)
+              else
+                mapping
+                  entry debug
+                    bool(true)
+      entry pipeline
+        sequence
+          value
+            string("build")
+          loop value=name in names
+            value
+              lua-expr("name")

@@ -1,0 +1,7 @@
+title: Cyclic runtime values are rejected
+mode: eval
+section: 10.2,36.1
+profile: safe
+backend: omnilua
+features: eval,engine-omnilua
+relaxed_limits: true

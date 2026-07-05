@@ -1,0 +1,6 @@
+title: Data profile rejects runtime-only values
+mode: eval
+section: 10.2,25,36.1
+profile: data
+backend: mock
+features: eval

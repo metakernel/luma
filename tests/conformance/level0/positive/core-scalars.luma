@@ -1,0 +1,14 @@
+title: "Example\nService"
+label: 'plain'
+missing:
+truthy: true
+falsey: false
+hex: 0xff
+float: 0x1.8p1
+description: |
+  line one
+  line two
+items:
+  - alpha
+  - nil
+  - 3

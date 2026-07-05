@@ -1,0 +1,6 @@
+title: Unknown tags rejected for schema docs
+mode: eval
+section: 27,36.1
+profile: data
+backend: mock
+features: eval

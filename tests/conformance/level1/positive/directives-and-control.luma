@@ -1,0 +1,19 @@
+@luma 0.1
+@profile safe
+@meta:
+  title: Example
+let defaults:
+  timeout: 3
+service: !Service
+  record: |expr
+    make_record()
+  dynamic: =defaults.timeout
+  [=dynamic_key]: !Date "2026-01-01"
+  @if environment == "prod":
+    debug: false
+  @else:
+    debug: true
+pipeline:
+  - build
+  @for name in names:
+    - =name

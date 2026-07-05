@@ -1,0 +1,18 @@
+doc separator
+  directive meta
+    entry title
+      string("first")
+  root
+    mapping
+      entry root
+        string("one")
+  terminator
+doc separator
+  comment line "line comment"
+  root
+    mapping
+      entry value
+        tagged(!Tag)
+          mapping
+            entry nested
+              string("two")

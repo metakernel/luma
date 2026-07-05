@@ -1,0 +1,7 @@
+title: Safe profile evaluation with OmniLua backend
+mode: eval
+section: 17.1,18,21,22
+profile: safe
+backend: omnilua
+features: eval,engine-omnilua
+relaxed_limits: true

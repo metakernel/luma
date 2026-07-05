@@ -1,0 +1,14 @@
+@import "common" as common
+@use safe.mod as safe
+let names:
+  - a
+  - b
+root:
+  imported: =common.answer
+  enabled: =safe.enabled
+  chunk: |lua-
+    return string.upper("chunk-ok")
+  steps:
+    - start
+    @for _, name in names:
+      - =string.upper(name)

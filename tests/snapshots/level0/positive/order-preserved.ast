@@ -1,0 +1,19 @@
+doc
+  root
+    mapping
+      entry root
+        mapping
+          entry c
+            number(3)
+          entry a
+            number(1)
+          entry b
+            number(2)
+          entry list
+            sequence
+              value
+                string("first")
+              value
+                string("second")
+              value
+                string("third")

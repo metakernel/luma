@@ -1,0 +1,10 @@
+root:
+  title: Example Service
+  enabled: true
+  notes: |
+    line one
+    line two
+  -- keep this comment
+  values:
+    - alpha
+    - 2

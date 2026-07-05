@@ -1,0 +1,6 @@
+title: Unsafe globals are rejected
+mode: eval
+section: 17.1,36.1
+profile: safe
+backend: mock
+features: eval

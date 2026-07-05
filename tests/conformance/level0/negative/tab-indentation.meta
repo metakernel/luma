@@ -1,0 +1,5 @@
+title: Tabs are rejected for indentation
+mode: parse
+section: 9.1,9.5
+profile: any
+backend: parse

@@ -1,0 +1,9 @@
+---
+@meta:
+  title: first
+root: one
+...
+---
+-- line comment
+value: !Tag
+  nested: two

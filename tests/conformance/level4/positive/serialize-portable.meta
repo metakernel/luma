@@ -1,0 +1,6 @@
+title: Portable values serialize canonically
+mode: serialize
+section: 34
+profile: tooling
+backend: mock
+features: eval

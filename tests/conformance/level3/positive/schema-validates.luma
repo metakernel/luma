@@ -1,0 +1,7 @@
+@profile data
+@schema "schemas/example"
+id: demo
+enabled: true
+names:
+  - a
+  - b

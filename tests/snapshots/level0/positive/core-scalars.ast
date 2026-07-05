@@ -1,0 +1,27 @@
+doc
+  root
+    mapping
+      entry title
+        string("Example\nService")
+      entry label
+        string("plain")
+      entry missing
+        null
+      entry truthy
+        bool(true)
+      entry falsey
+        bool(false)
+      entry hex
+        number(0xff)
+      entry float
+        number(0x1.8p1)
+      entry description
+        block-literal("line one\nline two\n")
+      entry items
+        sequence
+          value
+            string("alpha")
+          value
+            null
+          value
+            number(3)

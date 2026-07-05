@@ -1,0 +1,6 @@
+title: Metadata extraction and tag resolution
+mode: eval
+section: 24,25,26
+profile: safe
+backend: mock
+features: eval

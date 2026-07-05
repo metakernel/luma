@@ -1,0 +1,8 @@
+root:
+  c: 3
+  a: 1
+  b: 2
+  list:
+    - first
+    - second
+    - third
