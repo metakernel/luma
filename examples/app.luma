@@ -1,0 +1,9 @@
+# Parser and CLI sample input.
+name: Example App
+enabled: true
+ports:
+  - 8080
+  - 9090
+metadata:
+  owner: platform
+  tier: demo
