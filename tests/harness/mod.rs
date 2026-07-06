@@ -5,21 +5,21 @@ use std::{
 };
 
 #[cfg(feature = "engine-omnilua")]
-use luma_engine_omnilua::OmniLuaEngine;
+use lyma_engine_omnilua::OmniLuaEngine;
 #[cfg(feature = "eval")]
-use luma_eval::{
+use lyma_eval::{
     AstEvaluator, EvaluationOptions, EvaluationProfile, InMemoryModuleRegistry, InMemoryResolver,
     InMemoryTagResolver, ModuleRegistry, ResolverPolicy, ResourceResolver, UnknownTagPolicy,
 };
-use luma_parser::parse_str;
+use lyma_parser::parse_str;
 #[cfg(feature = "eval")]
-use luma_runtime::{
+use lyma_runtime::{
     ConversionPolicy, Engine, LuaRuntimeEngine, LuaRuntimeError, LuaRuntimePhase, LuaSourceText,
     RuntimeEnvironment, RuntimeEnvironmentFactory, RuntimeLimits, RuntimeModule,
     RuntimeModuleFactory, RuntimeValueCodec,
 };
-use luma_syntax::{
-    Directive, DocumentItem, FileId, LumaFile, LumaMapping, LumaNode, LumaNumber, LumaValue,
+use lyma_syntax::{
+    Directive, DocumentItem, FileId, LymaFile, LymaMapping, LymaNode, LymaNumber, LymaValue,
     MappingItem, SequenceItem,
 };
 
@@ -33,7 +33,7 @@ pub fn fixtures_root() -> PathBuf {
 }
 
 pub fn run_level(level: &str) {
-    if !filter_matches(level, &env_csv("LUMA_CONFORMANCE_LEVEL")) {
+    if !filter_matches(level, &env_csv("LYMA_CONFORMANCE_LEVEL")) {
         return;
     }
 
@@ -94,11 +94,11 @@ struct Fixture {
 
 impl Fixture {
     fn matches_filters(&self) -> bool {
-        filter_matches(&self.meta.backend, &env_csv("LUMA_CONFORMANCE_BACKEND"))
-            && filter_matches(&self.meta.profile, &env_csv("LUMA_CONFORMANCE_PROFILE"))
-            && (env_csv("LUMA_CONFORMANCE_SECTION").is_empty()
+        filter_matches(&self.meta.backend, &env_csv("LYMA_CONFORMANCE_BACKEND"))
+            && filter_matches(&self.meta.profile, &env_csv("LYMA_CONFORMANCE_PROFILE"))
+            && (env_csv("LYMA_CONFORMANCE_SECTION").is_empty()
                 || self.meta.section.iter().any(|section| {
-                    env_csv("LUMA_CONFORMANCE_SECTION")
+                    env_csv("LYMA_CONFORMANCE_SECTION")
                         .iter()
                         .any(|wanted| section.contains(wanted) || wanted.contains(section))
                 }))
@@ -145,7 +145,7 @@ impl Fixture {
     }
 
     fn run_format(&self, source: &str) {
-        let formatted = luma::tooling::format_document_edit(self.source_name(), source);
+        let formatted = lyma::tooling::format_document_edit(self.source_name(), source);
         assert!(
             formatted.parsed.diagnostics.is_empty(),
             "{} diagnostics: {:#?}",
@@ -253,7 +253,7 @@ impl Fixture {
         let docs = evaluate_with_mock(source, self.source_name(), &parsed.file, &self.meta)
             .unwrap_or_else(|error| fail_eval_error(self.label(), error));
         let [value] = docs.try_into().expect("single document");
-        let serialized = luma::tooling::serialize_portable_value(&value).unwrap();
+        let serialized = lyma::tooling::serialize_portable_value(&value).unwrap();
         assert_eq!(
             serialized,
             self.required_snapshot("fmt"),
@@ -288,7 +288,7 @@ fn load_level_fixtures(root: &Path, level: &str) -> Vec<Fixture> {
     let snapshot_root = root.join("snapshots").join(level);
     let mut fixtures = Vec::new();
     visit_dir(&conformance_root, &mut |path| {
-        if path.extension().and_then(|v| v.to_str()) != Some("luma") {
+        if path.extension().and_then(|v| v.to_str()) != Some("lyma") {
             return;
         }
         let name = path.file_stem().unwrap().to_string_lossy().to_string();
@@ -393,7 +393,7 @@ fn feature_enabled(feature: &str) -> bool {
         || (feature == "engine-omnilua" && cfg!(feature = "engine-omnilua"))
 }
 
-fn diagnostics_snapshot(diagnostics: &[luma_syntax::Diagnostic]) -> String {
+fn diagnostics_snapshot(diagnostics: &[lyma_syntax::Diagnostic]) -> String {
     let mut out = String::new();
     for diagnostic in diagnostics {
         out.push_str(diagnostic.code.code());
@@ -417,7 +417,7 @@ fn assert_diag_matches(label: String, expected: &str, actual: &str) {
     }
 }
 
-fn ast_snapshot(file: &LumaFile) -> String {
+fn ast_snapshot(file: &LymaFile) -> String {
     let mut out = String::new();
     for document in &file.documents {
         out.push_str("doc");
@@ -456,22 +456,22 @@ fn render_document_item(item: &DocumentItem, depth: usize, out: &mut String) {
     }
 }
 
-fn render_node(node: &LumaNode, depth: usize, out: &mut String) {
+fn render_node(node: &LymaNode, depth: usize, out: &mut String) {
     match node {
-        LumaNode::Null { .. } => line(depth, "null", out),
-        LumaNode::Boolean { value, .. } => line(depth, &format!("bool({value})"), out),
-        LumaNode::Number(number) => line(depth, &format!("number({})", number.lexeme), out),
-        LumaNode::String(string) => {
+        LymaNode::Null { .. } => line(depth, "null", out),
+        LymaNode::Boolean { value, .. } => line(depth, &format!("bool({value})"), out),
+        LymaNode::Number(number) => line(depth, &format!("number({})", number.lexeme), out),
+        LymaNode::String(string) => {
             let kind = match string.block_kind {
-                Some(luma_syntax::BlockKind::Folded) => "block-folded",
-                Some(luma_syntax::BlockKind::Literal) => "block-literal",
-                Some(luma_syntax::BlockKind::LuaExpression)
-                | Some(luma_syntax::BlockKind::LuaChunk) => "string",
+                Some(lyma_syntax::BlockKind::Folded) => "block-folded",
+                Some(lyma_syntax::BlockKind::Literal) => "block-literal",
+                Some(lyma_syntax::BlockKind::LuaExpression)
+                | Some(lyma_syntax::BlockKind::LuaChunk) => "string",
                 None => "string",
             };
             line(depth, &format!("{kind}({:?})", string.value), out);
         }
-        LumaNode::Sequence(sequence) => {
+        LymaNode::Sequence(sequence) => {
             line(depth, "sequence", out);
             for item in &sequence.items {
                 match item {
@@ -506,22 +506,22 @@ fn render_node(node: &LumaNode, depth: usize, out: &mut String) {
                 }
             }
         }
-        LumaNode::Mapping(mapping) => {
+        LymaNode::Mapping(mapping) => {
             line(depth, "mapping", out);
             render_mapping_items(&mapping.items, depth + 1, out);
         }
-        LumaNode::Tagged(tagged) => {
+        LymaNode::Tagged(tagged) => {
             line(depth, &format!("tagged(!{})", tagged.tag.name.value), out);
             if let Some(value) = &tagged.value {
                 render_node(value, depth + 1, out);
             }
         }
-        LumaNode::LuaExpression(expr) => line(depth, &format!("lua-expr({:?})", expr.source), out),
-        LumaNode::LuaExpressionBlock(expr) => {
+        LymaNode::LuaExpression(expr) => line(depth, &format!("lua-expr({:?})", expr.source), out),
+        LymaNode::LuaExpressionBlock(expr) => {
             line(depth, &format!("lua-expr-block({:?})", expr.source), out)
         }
-        LumaNode::LuaChunk(expr) => line(depth, &format!("lua-chunk({:?})", expr.source), out),
-        LumaNode::LuaTableConstructor(expr) => {
+        LymaNode::LuaChunk(expr) => line(depth, &format!("lua-chunk({:?})", expr.source), out),
+        LymaNode::LuaTableConstructor(expr) => {
             line(depth, &format!("lua-table({:?})", expr.source), out)
         }
     }
@@ -630,7 +630,7 @@ fn render_directive(directive: &Directive, depth: usize, out: &mut String) {
 }
 
 fn render_mapping_conditional(
-    block: &luma_syntax::ConditionalBlock<luma_syntax::MappingBlock>,
+    block: &lyma_syntax::ConditionalBlock<lyma_syntax::MappingBlock>,
     depth: usize,
     out: &mut String,
 ) {
@@ -659,7 +659,7 @@ fn render_mapping_conditional(
 }
 
 fn render_sequence_conditional(
-    block: &luma_syntax::ConditionalBlock<luma_syntax::SequenceBlock>,
+    block: &lyma_syntax::ConditionalBlock<lyma_syntax::SequenceBlock>,
     depth: usize,
     out: &mut String,
 ) {
@@ -687,27 +687,27 @@ fn render_sequence_conditional(
     }
 }
 
-fn key_name(key: &luma_syntax::MappingKey) -> String {
+fn key_name(key: &lyma_syntax::MappingKey) -> String {
     match key {
-        luma_syntax::MappingKey::Plain { value, .. } => value.clone(),
-        luma_syntax::MappingKey::Quoted(node) => node.value.clone(),
-        luma_syntax::MappingKey::Expression { expression, .. } => {
+        lyma_syntax::MappingKey::Plain { value, .. } => value.clone(),
+        lyma_syntax::MappingKey::Quoted(node) => node.value.clone(),
+        lyma_syntax::MappingKey::Expression { expression, .. } => {
             format!("[expr:{}]", expression.source)
         }
     }
 }
 
-fn comment_kind(comment: &luma_syntax::Comment) -> &'static str {
+fn comment_kind(comment: &lyma_syntax::Comment) -> &'static str {
     match comment.kind {
-        luma_syntax::CommentKind::Line => "line",
-        luma_syntax::CommentKind::Block => "block",
+        lyma_syntax::CommentKind::Line => "line",
+        lyma_syntax::CommentKind::Block => "block",
     }
 }
 
-fn loop_bindings<T>(block: &luma_syntax::LoopBlock<T>) -> String {
+fn loop_bindings<T>(block: &lyma_syntax::LoopBlock<T>) -> String {
     match &block.bindings {
-        luma_syntax::LoopBindings::One { value, .. } => format!("value={value}"),
-        luma_syntax::LoopBindings::Two { key, value, .. } => format!("key={key} value={value}"),
+        lyma_syntax::LoopBindings::One { value, .. } => format!("value={value}"),
+        lyma_syntax::LoopBindings::Two { key, value, .. } => format!("key={key} value={value}"),
     }
 }
 
@@ -718,7 +718,7 @@ fn line(depth: usize, text: &str, out: &mut String) {
 }
 
 #[cfg(feature = "eval")]
-fn documents_json(docs: &[LumaValue]) -> String {
+fn documents_json(docs: &[LymaValue]) -> String {
     match docs {
         [single] => {
             let mut out = json_value(single);
@@ -740,14 +740,14 @@ fn documents_json(docs: &[LumaValue]) -> String {
 }
 
 #[cfg(feature = "eval")]
-fn json_value(value: &LumaValue) -> String {
+fn json_value(value: &LymaValue) -> String {
     match value {
-        LumaValue::Null(_) => String::from("null"),
-        LumaValue::Boolean(value) => value.to_string(),
-        LumaValue::Number(LumaNumber::Integer(value)) => value.to_string(),
-        LumaValue::Number(LumaNumber::Float(value)) => value.to_string(),
-        LumaValue::String(value) => format!("\"{}\"", escape_json(value)),
-        LumaValue::Sequence(sequence) => {
+        LymaValue::Null(_) => String::from("null"),
+        LymaValue::Boolean(value) => value.to_string(),
+        LymaValue::Number(LymaNumber::Integer(value)) => value.to_string(),
+        LymaValue::Number(LymaNumber::Float(value)) => value.to_string(),
+        LymaValue::String(value) => format!("\"{}\"", escape_json(value)),
+        LymaValue::Sequence(sequence) => {
             let items = sequence
                 .items
                 .iter()
@@ -756,7 +756,7 @@ fn json_value(value: &LumaValue) -> String {
                 .join(",");
             format!("[{items}]")
         }
-        LumaValue::Mapping(mapping) => {
+        LymaValue::Mapping(mapping) => {
             let items = mapping
                 .entries
                 .iter()
@@ -771,12 +771,12 @@ fn json_value(value: &LumaValue) -> String {
                 .join(",");
             format!("{{{items}}}")
         }
-        LumaValue::Tagged(tagged) => format!(
+        LymaValue::Tagged(tagged) => format!(
             "{{\"tag\":\"{}\",\"value\":{}}}",
             escape_json(&tagged.tag.name.value),
             json_value(&tagged.value)
         ),
-        LumaValue::Function(host) | LumaValue::UserData(host) | LumaValue::HostObject(host) => {
+        LymaValue::Function(host) | LymaValue::UserData(host) | LymaValue::HostObject(host) => {
             format!(
                 "\"<{}:{}>\"",
                 host.kind,
@@ -787,13 +787,13 @@ fn json_value(value: &LumaValue) -> String {
 }
 
 #[cfg(feature = "eval")]
-fn key_to_string(key: &luma_syntax::LumaKey) -> String {
+fn key_to_string(key: &lyma_syntax::LymaKey) -> String {
     match key {
-        luma_syntax::LumaKey::String(value) => value.clone(),
-        luma_syntax::LumaKey::Number(LumaNumber::Integer(value)) => value.to_string(),
-        luma_syntax::LumaKey::Number(LumaNumber::Float(value)) => value.to_string(),
-        luma_syntax::LumaKey::Boolean(value) => value.to_string(),
-        luma_syntax::LumaKey::Host(host) => {
+        lyma_syntax::LymaKey::String(value) => value.clone(),
+        lyma_syntax::LymaKey::Number(LymaNumber::Integer(value)) => value.to_string(),
+        lyma_syntax::LymaKey::Number(LymaNumber::Float(value)) => value.to_string(),
+        lyma_syntax::LymaKey::Boolean(value) => value.to_string(),
+        lyma_syntax::LymaKey::Host(host) => {
             format!("{}:{}", host.kind, host.label.as_deref().unwrap_or("anon"))
         }
     }
@@ -808,7 +808,7 @@ fn escape_json(value: &str) -> String {
 }
 
 #[cfg(feature = "eval")]
-fn fail_eval_error(label: String, error: luma_eval::EvaluationError) -> ! {
+fn fail_eval_error(label: String, error: lyma_eval::EvaluationError) -> ! {
     panic!(
         "fixture {label}: {} {}",
         error.diagnostic.code.code(),
@@ -820,9 +820,9 @@ fn fail_eval_error(label: String, error: luma_eval::EvaluationError) -> ! {
 fn evaluate_with_mock(
     _source: &str,
     source_name: &str,
-    file: &LumaFile,
+    file: &LymaFile,
     meta: &FixtureMeta,
-) -> Result<Vec<LumaValue>, luma_eval::EvaluationError> {
+) -> Result<Vec<LymaValue>, lyma_eval::EvaluationError> {
     let resolver = shared_resolver();
     let modules = shared_modules();
     let tags = shared_tags();
@@ -845,9 +845,9 @@ fn evaluate_with_mock(
 fn evaluate_with_omnilua(
     _source: &str,
     source_name: &str,
-    file: &LumaFile,
+    file: &LymaFile,
     meta: &FixtureMeta,
-) -> Result<Vec<LumaValue>, luma_eval::EvaluationError> {
+) -> Result<Vec<LymaValue>, lyma_eval::EvaluationError> {
     let resolver = shared_resolver();
     let modules = shared_modules();
     let tags = shared_tags();
@@ -889,14 +889,14 @@ fn shared_modules() -> InMemoryModuleRegistry {
     })
     .with_module(
         "safe.mod",
-        vec![(String::from("enabled"), LumaValue::Boolean(true))],
+        vec![(String::from("enabled"), LymaValue::Boolean(true))],
     )
 }
 
 #[cfg(feature = "eval")]
 fn shared_tags() -> InMemoryTagResolver {
     InMemoryTagResolver::new().with_handler("upper", |value| match value {
-        LumaValue::String(value) => Ok(LumaValue::String(value.to_uppercase())),
+        LymaValue::String(value) => Ok(LymaValue::String(value.to_uppercase())),
         other => Ok(other.clone()),
     })
 }
@@ -939,7 +939,7 @@ fn omnilua_profile(meta: &FixtureMeta) -> EvaluationProfile {
 
 #[cfg(feature = "eval")]
 #[derive(Debug, Clone, PartialEq)]
-struct MockValue(LumaValue);
+struct MockValue(LymaValue);
 
 #[cfg(feature = "eval")]
 #[derive(Debug, Clone, PartialEq)]
@@ -1045,15 +1045,15 @@ impl RuntimeValueCodec for MockEngine {
     type Value = MockValue;
     type FrozenValue = MockValue;
 
-    fn to_luma_value(
+    fn to_lyma_value(
         &self,
         value: &Self::Value,
         _policy: &ConversionPolicy,
-    ) -> Result<LumaValue, LuaRuntimeError> {
+    ) -> Result<LymaValue, LuaRuntimeError> {
         Ok(value.0.clone())
     }
 
-    fn from_luma_value(&self, value: &LumaValue) -> Result<Self::Value, LuaRuntimeError> {
+    fn from_lyma_value(&self, value: &LymaValue) -> Result<Self::Value, LuaRuntimeError> {
         Ok(MockValue(value.clone()))
     }
 
@@ -1100,7 +1100,7 @@ impl LuaRuntimeEngine for MockEngine {
         if limits.max_instructions == Some(0) {
             return Err(LuaRuntimeError::limit_exceeded(
                 self.engine_name(),
-                luma_runtime::RuntimeLimitKind::Instructions,
+                lyma_runtime::RuntimeLimitKind::Instructions,
                 None,
             ));
         }
@@ -1116,7 +1116,7 @@ impl LuaRuntimeEngine for MockEngine {
         if limits.max_instructions == Some(0) {
             return Err(LuaRuntimeError::limit_exceeded(
                 self.engine_name(),
-                luma_runtime::RuntimeLimitKind::Instructions,
+                lyma_runtime::RuntimeLimitKind::Instructions,
                 None,
             ));
         }
@@ -1132,19 +1132,19 @@ impl LuaRuntimeEngine for MockEngine {
 fn eval_mock_expression(
     source: &str,
     environment: &MockEnvironment,
-) -> Result<LumaValue, LuaRuntimeError> {
+) -> Result<LymaValue, LuaRuntimeError> {
     let trimmed = source.trim();
     if trimmed == "nil" {
-        return Ok(LumaValue::Null(luma_syntax::LumaNull));
+        return Ok(LymaValue::Null(lyma_syntax::LymaNull));
     }
     if trimmed == "true" {
-        return Ok(LumaValue::Boolean(true));
+        return Ok(LymaValue::Boolean(true));
     }
     if trimmed == "false" {
-        return Ok(LumaValue::Boolean(false));
+        return Ok(LymaValue::Boolean(false));
     }
     if trimmed == "make_userdata" {
-        return Ok(LumaValue::UserData(luma_syntax::LumaHostValue {
+        return Ok(LymaValue::UserData(lyma_syntax::LymaHostValue {
             kind: String::from("mock_userdata"),
             label: Some(String::from("userdata")),
         }));
@@ -1153,16 +1153,16 @@ fn eval_mock_expression(
         .strip_prefix('"')
         .and_then(|value| value.strip_suffix('"'))
     {
-        return Ok(LumaValue::String(String::from(value)));
+        return Ok(LymaValue::String(String::from(value)));
     }
     if let Some((left, right)) = trimmed.split_once("==") {
-        return Ok(LumaValue::Boolean(
+        return Ok(LymaValue::Boolean(
             eval_mock_expression(left.trim(), environment)?
                 == eval_mock_expression(right.trim(), environment)?,
         ));
     }
     if let Ok(number) = trimmed.parse::<i64>() {
-        return Ok(LumaValue::Number(LumaNumber::Integer(number)));
+        return Ok(LymaValue::Number(LymaNumber::Integer(number)));
     }
     let mut parts = trimmed.split('.');
     let first = parts.next().unwrap();
@@ -1172,7 +1172,7 @@ fn eval_mock_expression(
         .ok_or_else(|| {
             LuaRuntimeError::runtime_error(
                 "mock",
-                LuaRuntimePhase::Evaluate(luma_runtime::LuaChunkKind::Expression),
+                LuaRuntimePhase::Evaluate(lyma_runtime::LuaChunkKind::Expression),
                 format!("unknown symbol: {first}"),
                 None,
             )
@@ -1181,11 +1181,11 @@ fn eval_mock_expression(
         .clone();
     for part in parts {
         value = match value {
-            LumaValue::Mapping(mapping) => lookup(&mapping, part).clone(),
+            LymaValue::Mapping(mapping) => lookup(&mapping, part).clone(),
             _ => {
                 return Err(LuaRuntimeError::runtime_error(
                     "mock",
-                    LuaRuntimePhase::Evaluate(luma_runtime::LuaChunkKind::Expression),
+                    LuaRuntimePhase::Evaluate(lyma_runtime::LuaChunkKind::Expression),
                     format!("cannot index {part}"),
                     None,
                 ));
@@ -1196,11 +1196,11 @@ fn eval_mock_expression(
 }
 
 #[cfg(feature = "eval")]
-fn lookup<'a>(mapping: &'a LumaMapping, key: &str) -> &'a LumaValue {
+fn lookup<'a>(mapping: &'a LymaMapping, key: &str) -> &'a LymaValue {
     &mapping
         .entries
         .iter()
-        .find(|entry| matches!(&entry.key, luma_syntax::LumaKey::String(value) if value == key))
+        .find(|entry| matches!(&entry.key, lyma_syntax::LymaKey::String(value) if value == key))
         .unwrap()
         .value
 }

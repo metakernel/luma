@@ -3,9 +3,9 @@ requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "luma"
+name = "lymapy"
 version = "0.1.0"
-description = "Python bindings for luma and LUMBA"
+description = "Python bindings for lyma and LYBA"
 requires-python = ">=3.8"
 license = { text = "MIT OR Apache-2.0" }
 classifiers = [
@@ -15,9 +15,13 @@ classifiers = [
 
 [tool.maturin]
 features = ["python"]
-module-name = "luma"
+module-name = "lymapy"
 
 [tool.uv.workspace]
 members = [
     "examples/python",
 ]
+
+[[tool.uv.index]]
+name = "lymapy"
+url = "https://pypi.org/project/lymapy/"

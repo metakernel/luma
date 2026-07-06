@@ -1,10 +1,10 @@
-# Luma examples
+# Lyma examples
 
-This directory contains small, runnable examples for the public `luma` facade.
+This directory contains small, runnable examples for the public `lyma` facade.
 
 ## Parser-only examples
 
-These use Luma's default `parser` feature and do not create a Lua runtime:
+These use Lyma's default `parser` feature and do not create a Lua runtime:
 
 ```powershell
 cargo run --example parse_and_format
@@ -19,7 +19,7 @@ cargo run --example tooling
 - incremental parse session updates through the current full-reparse shell
 
 Those primitives are intentionally lower-level than full LSP features. Downstream
-servers such as `lumals` should layer semantic tokens, find-references, rename,
+servers such as `lymals` should layer semantic tokens, find-references, rename,
 and workspace indexing on top of them.
 
 ## Evaluation example
@@ -36,9 +36,9 @@ instead of evaluating source.
 
 ## CLI sample input
 
-`app.luma` is a small source file you can use with the CLI:
+`app.lyma` is a small source file you can use with the CLI:
 
 ```powershell
-cargo run -p luma-cli -- parse examples/app.luma --emit ast
-cargo run -p luma-cli -- fmt examples/app.luma
+cargo run -p lyma-cli -- parse examples/app.lyma --emit ast
+cargo run -p lyma-cli -- fmt examples/app.lyma
 ```

@@ -1,6 +1,0 @@
-@luma 0.1
-@profile safe
-@meta:
-  title: Example
-  generated: false
-!upper hello

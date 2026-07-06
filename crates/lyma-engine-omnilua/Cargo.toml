@@ -1,0 +1,29 @@
+[package]
+name = "lyma-engine-omnilua"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+default = []
+
+[dependencies]
+lyma-runtime = { path = "../lyma-runtime" }
+lyma-syntax = { path = "../lyma-syntax" }
+omnilua.workspace = true
+
+[dev-dependencies]
+lyma-syntax = { path = "../lyma-syntax" }
+
+[[test]]
+name = "omnilua-integration"
+path = "../../tests/omnilua/integration.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

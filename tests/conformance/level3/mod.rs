@@ -1,21 +1,21 @@
 use std::collections::BTreeMap;
 
 #[cfg(feature = "engine-omnilua")]
-use luma_engine_omnilua::OmniLuaEngine;
-use luma_eval::{
+use lyma_engine_omnilua::OmniLuaEngine;
+use lyma_eval::{
     AstEvaluator, EvaluationOptions, EvaluationProfile, InMemoryResolver, InMemoryTagResolver,
     ModuleRegistry, ResolverPolicy, ResourceResolver, UnknownTagPolicy,
 };
-use luma_parser::parse_str;
-use luma_runtime::{
+use lyma_parser::parse_str;
+use lyma_runtime::{
     Engine, LuaRuntimeEngine, LuaRuntimeError, LuaRuntimePhase, LuaSourceText, RuntimeEnvironment,
     RuntimeEnvironmentFactory, RuntimeLimits, RuntimeModule, RuntimeModuleFactory,
     RuntimeValueCodec,
 };
-use luma_syntax::{FileId, LumaKey, LumaMapping, LumaNull, LumaNumber, LumaValue};
+use lyma_syntax::{FileId, LymaKey, LymaMapping, LymaNull, LymaNumber, LymaValue};
 
 #[derive(Debug, Clone, PartialEq)]
-struct MockValue(LumaValue);
+struct MockValue(LymaValue);
 
 #[derive(Debug, Clone, PartialEq)]
 struct MockModule {
@@ -112,15 +112,15 @@ impl RuntimeValueCodec for MockEngine {
     type Value = MockValue;
     type FrozenValue = MockValue;
 
-    fn to_luma_value(
+    fn to_lyma_value(
         &self,
         value: &Self::Value,
-        _policy: &luma_runtime::ConversionPolicy,
-    ) -> Result<LumaValue, LuaRuntimeError> {
+        _policy: &lyma_runtime::ConversionPolicy,
+    ) -> Result<LymaValue, LuaRuntimeError> {
         Ok(value.0.clone())
     }
 
-    fn from_luma_value(&self, value: &LumaValue) -> Result<Self::Value, LuaRuntimeError> {
+    fn from_lyma_value(&self, value: &LymaValue) -> Result<Self::Value, LuaRuntimeError> {
         Ok(MockValue(value.clone()))
     }
 
@@ -182,8 +182,8 @@ impl LuaRuntimeEngine for MockEngine {
 fn level3_extracts_metadata_and_runs_tag_resolvers() {
     let parsed = parse_str(
         FileId(10),
-        "level3-meta.luma",
-        r#"@luma 0.1
+        "level3-meta.lyma",
+        r#"@lyma 0.1
 @profile safe
 @meta:
   title: Example
@@ -192,7 +192,7 @@ fn level3_extracts_metadata_and_runs_tag_resolvers() {
 "#,
     );
     let tag_resolver = InMemoryTagResolver::new().with_handler("upper", |value| match value {
-        LumaValue::String(value) => Ok(LumaValue::String(value.to_uppercase())),
+        LymaValue::String(value) => Ok(LymaValue::String(value.to_uppercase())),
         _ => unreachable!(),
     });
     let evaluator = AstEvaluator {
@@ -208,23 +208,23 @@ fn level3_extracts_metadata_and_runs_tag_resolvers() {
     };
 
     let [document] = evaluator
-        .evaluate_file_with_metadata(&parsed.file, "level3-meta.luma", None)
+        .evaluate_file_with_metadata(&parsed.file, "level3-meta.lyma", None)
         .expect("evaluation should succeed")
         .try_into()
         .expect("single document");
 
-    assert_eq!(document.value, LumaValue::String(String::from("HELLO")));
+    assert_eq!(document.value, LymaValue::String(String::from("HELLO")));
     assert_eq!(document.metadata.version, Some(String::from("0.1")));
     assert!(matches!(
         document.metadata.profile,
-        Some(luma_syntax::LumaProfile::Safe)
+        Some(lyma_syntax::LymaProfile::Safe)
     ));
-    let LumaValue::Mapping(meta) = document.metadata.value.expect("meta should exist") else {
+    let LymaValue::Mapping(meta) = document.metadata.value.expect("meta should exist") else {
         panic!()
     };
     assert_eq!(
         lookup(&meta, "title"),
-        &LumaValue::String(String::from("Example"))
+        &LymaValue::String(String::from("Example"))
     );
 }
 
@@ -232,7 +232,7 @@ fn level3_extracts_metadata_and_runs_tag_resolvers() {
 fn level3_loads_basic_schemas_and_rejects_unknown_tags_by_default() {
     let parsed = parse_str(
         FileId(11),
-        "level3-schema.luma",
+        "level3-schema.lyma",
         r#"@profile data
 @schema "schemas/example"
 id: demo
@@ -260,7 +260,7 @@ enabled: !mystery true
     };
 
     let error = evaluator
-        .evaluate_file(&parsed.file, "level3-schema.luma", None)
+        .evaluate_file(&parsed.file, "level3-schema.lyma", None)
         .expect_err("unknown tags should be rejected for schema documents");
     assert_eq!(error.diagnostic.code.code(), "E0011");
 }
@@ -269,7 +269,7 @@ enabled: !mystery true
 fn level3_data_outputs_reject_runtime_only_values_as_e0025() {
     let parsed = parse_str(
         FileId(12),
-        "level3-data.luma",
+        "level3-data.lyma",
         "@profile data\nroot: =make_userdata\n",
     );
     let evaluator = AstEvaluator {
@@ -285,7 +285,7 @@ fn level3_data_outputs_reject_runtime_only_values_as_e0025() {
     };
 
     let error = evaluator
-        .evaluate_file(&parsed.file, "level3-data.luma", None)
+        .evaluate_file(&parsed.file, "level3-data.lyma", None)
         .expect_err("data profile should reject runtime-only values");
     assert_eq!(error.diagnostic.code.code(), "E0025");
 }
@@ -294,7 +294,7 @@ fn level3_data_outputs_reject_runtime_only_values_as_e0025() {
 fn level3_loaded_schema_validates_values() {
     let parsed = parse_str(
         FileId(13),
-        "level3-schema-pass.luma",
+        "level3-schema-pass.lyma",
         r#"@profile data
 @schema "schemas/example"
 id: demo
@@ -325,16 +325,16 @@ names:
     };
 
     let [value] = evaluator
-        .evaluate_file(&parsed.file, "level3-schema-pass.luma", None)
+        .evaluate_file(&parsed.file, "level3-schema-pass.lyma", None)
         .expect("schema should validate")
         .try_into()
         .expect("single document");
-    let LumaValue::Mapping(mapping) = value else {
+    let LymaValue::Mapping(mapping) = value else {
         panic!()
     };
     assert_eq!(
         lookup(&mapping, "id"),
-        &LumaValue::String(String::from("demo"))
+        &LymaValue::String(String::from("demo"))
     );
 }
 
@@ -343,7 +343,7 @@ names:
 fn level3_omnilua_rejects_cyclic_chunk_outputs() {
     let parsed = parse_str(
         FileId(14),
-        "level3-cycle.luma",
+        "level3-cycle.lyma",
         "root: |lua\n  local t = {}\n  t.self = t\n  return t\n",
     );
     let engine = OmniLuaEngine::default();
@@ -361,7 +361,7 @@ fn level3_omnilua_rejects_cyclic_chunk_outputs() {
     };
 
     let error = evaluator
-        .evaluate_file(&parsed.file, "level3-cycle.luma", None)
+        .evaluate_file(&parsed.file, "level3-cycle.lyma", None)
         .expect_err("cycles should be rejected");
     assert!(
         matches!(error.diagnostic.code.code(), "E0013" | "E0030"),
@@ -370,11 +370,11 @@ fn level3_omnilua_rejects_cyclic_chunk_outputs() {
     );
 }
 
-fn lookup<'a>(mapping: &'a LumaMapping, key: &str) -> &'a LumaValue {
+fn lookup<'a>(mapping: &'a LymaMapping, key: &str) -> &'a LymaValue {
     &mapping
         .entries
         .iter()
-        .find(|entry| entry.key == LumaKey::String(String::from(key)))
+        .find(|entry| entry.key == LymaKey::String(String::from(key)))
         .unwrap()
         .value
 }
@@ -382,19 +382,19 @@ fn lookup<'a>(mapping: &'a LumaMapping, key: &str) -> &'a LumaValue {
 fn eval_mock_expression(
     source: &str,
     environment: &MockEnvironment,
-) -> Result<LumaValue, LuaRuntimeError> {
+) -> Result<LymaValue, LuaRuntimeError> {
     let trimmed = source.trim();
     if trimmed == "nil" {
-        return Ok(LumaValue::Null(LumaNull));
+        return Ok(LymaValue::Null(LymaNull));
     }
     if trimmed == "true" {
-        return Ok(LumaValue::Boolean(true));
+        return Ok(LymaValue::Boolean(true));
     }
     if trimmed == "false" {
-        return Ok(LumaValue::Boolean(false));
+        return Ok(LymaValue::Boolean(false));
     }
     if trimmed == "make_userdata" {
-        return Ok(LumaValue::UserData(luma_syntax::LumaHostValue {
+        return Ok(LymaValue::UserData(lyma_syntax::LymaHostValue {
             kind: String::from("mock_userdata"),
             label: Some(String::from("userdata")),
         }));
@@ -403,10 +403,10 @@ fn eval_mock_expression(
         .strip_prefix('"')
         .and_then(|value| value.strip_suffix('"'))
     {
-        return Ok(LumaValue::String(String::from(value)));
+        return Ok(LymaValue::String(String::from(value)));
     }
     if let Ok(number) = trimmed.parse::<i64>() {
-        return Ok(LumaValue::Number(LumaNumber::Integer(number)));
+        return Ok(LymaValue::Number(LymaNumber::Integer(number)));
     }
 
     let mut parts = trimmed.split('.');
@@ -417,7 +417,7 @@ fn eval_mock_expression(
         .ok_or_else(|| {
             LuaRuntimeError::runtime_error(
                 "mock",
-                LuaRuntimePhase::Evaluate(luma_runtime::LuaChunkKind::Expression),
+                LuaRuntimePhase::Evaluate(lyma_runtime::LuaChunkKind::Expression),
                 format!("unknown symbol: {first}"),
                 None,
             )
@@ -426,11 +426,11 @@ fn eval_mock_expression(
         .clone();
     for part in parts {
         value = match value {
-            LumaValue::Mapping(mapping) => lookup(&mapping, part).clone(),
+            LymaValue::Mapping(mapping) => lookup(&mapping, part).clone(),
             _ => {
                 return Err(LuaRuntimeError::runtime_error(
                     "mock",
-                    LuaRuntimePhase::Evaluate(luma_runtime::LuaChunkKind::Expression),
+                    LuaRuntimePhase::Evaluate(lyma_runtime::LuaChunkKind::Expression),
                     format!("cannot index {part}"),
                     None,
                 ));

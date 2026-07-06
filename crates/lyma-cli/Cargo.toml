@@ -1,0 +1,54 @@
+[package]
+name = "lyma-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "lyma"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5.9", features = ["derive"] }
+lyma = { path = "../..", default-features = false, features = ["parser"] }
+lyma-eval = { path = "../lyma-eval", optional = true }
+lyma-engine-omnilua = { path = "../lyma-engine-omnilua", optional = true }
+lyma-parser = { path = "../lyma-parser" }
+lyma-syntax = { path = "../lyma-syntax" }
+serde_json = "1.0.120"
+
+[features]
+default = []
+eval = ["dep:lyma-eval"]
+engine-omnilua = ["eval", "dep:lyma-engine-omnilua", "lyma/engine-omnilua"]
+lyba = ["lyma/lyba"]
+
+[dev-dependencies]
+assert_cmd = "2.0.16"
+predicates = "3.1.2"
+tempfile = "3.12.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -2 }
+nursery = { level = "warn", priority = -3 }
+cargo = { level = "warn", priority = -4 }
+cognitive_complexity = "allow"
+format_collect = "allow"
+missing_const_for_fn = "allow"
+module_name_repetitions = "allow"
+multiple_crate_versions = "allow"
+needless_pass_by_value = "allow"
+option_if_let_else = "allow"
+ptr_arg = "allow"
+redundant_clone = "allow"
+struct_excessive_bools = "allow"
+too_many_lines = "allow"
+uninlined_format_args = "allow"

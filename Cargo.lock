@@ -333,87 +333,87 @@ dependencies = [
 ]
 
 [[package]]
-name = "luma"
+name = "lyma"
 version = "0.1.0"
 dependencies = [
- "luma-engine-omnilua",
- "luma-eval",
- "luma-lumba",
- "luma-parser",
- "luma-runtime",
- "luma-serde",
- "luma-syntax",
+ "lyma-engine-omnilua",
+ "lyma-eval",
+ "lyma-lyba",
+ "lyma-parser",
+ "lyma-runtime",
+ "lyma-serde",
+ "lyma-syntax",
  "pyo3",
 ]
 
 [[package]]
-name = "luma-cli"
+name = "lyma-cli"
 version = "0.1.0"
 dependencies = [
  "assert_cmd",
  "clap",
- "luma",
- "luma-engine-omnilua",
- "luma-eval",
- "luma-parser",
- "luma-syntax",
+ "lyma",
+ "lyma-engine-omnilua",
+ "lyma-eval",
+ "lyma-parser",
+ "lyma-syntax",
  "predicates",
  "serde_json",
  "tempfile",
 ]
 
 [[package]]
-name = "luma-engine-omnilua"
+name = "lyma-engine-omnilua"
 version = "0.1.0"
 dependencies = [
- "luma-runtime",
- "luma-syntax",
+ "lyma-runtime",
+ "lyma-syntax",
  "omnilua",
 ]
 
 [[package]]
-name = "luma-eval"
+name = "lyma-eval"
 version = "0.1.0"
 dependencies = [
- "luma-parser",
- "luma-runtime",
- "luma-syntax",
+ "lyma-parser",
+ "lyma-runtime",
+ "lyma-syntax",
 ]
 
 [[package]]
-name = "luma-lumba"
+name = "lyma-lyba"
 version = "0.1.0"
 dependencies = [
  "crc32c",
- "luma-parser",
- "luma-syntax",
+ "lyma-parser",
+ "lyma-syntax",
  "proptest",
 ]
 
 [[package]]
-name = "luma-parser"
+name = "lyma-parser"
 version = "0.1.0"
 dependencies = [
- "luma-syntax",
+ "lyma-syntax",
 ]
 
 [[package]]
-name = "luma-runtime"
+name = "lyma-runtime"
 version = "0.1.0"
 dependencies = [
- "luma-syntax",
+ "lyma-syntax",
 ]
 
 [[package]]
-name = "luma-serde"
+name = "lyma-serde"
 version = "0.1.0"
 dependencies = [
- "luma-syntax",
+ "lyma-syntax",
  "serde",
 ]
 
 [[package]]
-name = "luma-syntax"
+name = "lyma-syntax"
 version = "0.1.0"
 
 [[package]]

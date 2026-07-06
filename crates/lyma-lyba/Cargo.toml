@@ -1,0 +1,65 @@
+[package]
+name = "lyma-lyba"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -2 }
+nursery = { level = "warn", priority = -3 }
+cargo = { level = "warn", priority = -4 }
+assigning_clones = "allow"
+bool_assert_comparison = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+cognitive_complexity = "allow"
+collapsible_if = "allow"
+collapsible_match = "allow"
+derive_partial_eq_without_eq = "allow"
+doc_markdown = "allow"
+fn_params_excessive_bools = "allow"
+identity_op = "allow"
+ignored_unit_patterns = "allow"
+items_after_test_module = "allow"
+map_unwrap_or = "allow"
+match_same_arms = "allow"
+missing_const_for_fn = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+multiple_crate_versions = "allow"
+needless_lifetimes = "allow"
+or_fun_call = "allow"
+redundant_clone = "allow"
+similar_names = "allow"
+single_char_pattern = "allow"
+too_many_arguments = "allow"
+too_many_lines = "allow"
+type_complexity = "allow"
+uninlined_format_args = "allow"
+unused_enumerate_index = "allow"
+unused_self = "allow"
+use_self = "allow"
+
+[dependencies]
+crc32c.workspace = true
+lyma-syntax = { path = "../lyma-syntax" }
+
+[dev-dependencies]
+ lyma-parser = { path = "../lyma-parser" }
+proptest = "1.6"

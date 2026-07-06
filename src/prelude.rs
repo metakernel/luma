@@ -1,4 +1,4 @@
-//! Common imports for consumers of the `luma` crate.
+//! Common imports for consumers of the `lyma` crate.
 
 #[cfg(feature = "omnilua")]
 pub use crate::OmniLuaEngine;
@@ -8,6 +8,6 @@ pub use crate::Parser;
 pub use crate::serde;
 pub use crate::version;
 #[cfg(feature = "syntax")]
-pub use crate::{Diagnostic, LumaDocument, LumaValue};
+pub use crate::{Diagnostic, LymaDocument, LymaValue};
 #[cfg(feature = "eval")]
 pub use crate::{LoadOptions, Loader, ModuleRegistry, Profile, Resolver, TagResolver};

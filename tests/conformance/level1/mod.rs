@@ -1,13 +1,13 @@
-use luma_parser::parse_str;
-use luma_syntax::{Directive, DocumentItem, FileId, LumaFile, LumaNode, MappingItem, SequenceItem};
+use lyma_parser::parse_str;
+use lyma_syntax::{Directive, DocumentItem, FileId, LymaFile, LymaNode, MappingItem, SequenceItem};
 
 #[test]
 fn level1_parses_static_sections_13_to_29_into_ast_snapshots() {
-    let source = r#"@luma 0.1
+    let source = r#"@lyma 0.1
 @profile safe
-@schema "./schemas/service.schema.luma"
-@import "./common.luma" as common
-@include "./base.luma"
+@schema "./schemas/service.schema.lyma"
+@import "./common.lyma" as common
+@include "./base.lyma"
 @use std.text as text
 @lua:
   return {
@@ -48,7 +48,7 @@ service: !Service
   @for name, code in status_codes:
     [=name]: =code
 pipeline:
-  @include "./steps.luma"
+  @include "./steps.lyma"
   - build
   - ...common.steps
   @if include_search:
@@ -59,7 +59,7 @@ pipeline:
     - id: =name
 "#;
 
-    let parsed = parse_str(FileId(1), "level1-static.luma", source);
+    let parsed = parse_str(FileId(1), "level1-static.lyma", source);
     assert!(parsed.diagnostics.is_empty(), "{:#?}", parsed.diagnostics);
     assert_eq!(snapshot(&parsed.file), expected_static_snapshot());
 }
@@ -76,20 +76,20 @@ root: one
 value: !Tag
   nested: two
 "#;
-    let parsed = parse_str(FileId(2), "stream.luma", source);
+    let parsed = parse_str(FileId(2), "stream.lyma", source);
     assert!(parsed.diagnostics.is_empty(), "{:#?}", parsed.diagnostics);
     assert_eq!(snapshot(&parsed.file), expected_stream_snapshot());
 }
 
 fn expected_static_snapshot() -> &'static str {
-    "doc\n  directive version 0.1\n  directive profile safe\n  directive schema ./schemas/service.schema.luma\n  directive import ./common.luma as common\n  directive include ./base.luma\n  directive use std.text as text\n  directive lua return {\\n  trim = function(x)\\n    return x\\n  end,\\n}\\n\n  directive meta\n    entry title\n      string(\"Example\")\n    entry generated\n      bool(false)\n  let defaults\n    mapping\n      entry retries\n        number(3)\n      entry timeout_ms\n        number(1000)\n  comment block \"block\\ncomment\"\n  root\n    mapping\n      entry service\n        tagged(!Service)\n          mapping\n            entry description\n              block-folded(\"This becomes a paragraph with folded lines.\\n\\nAnd a new paragraph.\\n\")\n            entry script\n              lua-chunk(\"return function()\\n  return true\\nend\")\n            entry record\n              lua-expr-block(\"make_record({ id = \\\"example\\\" })\\n\")\n            entry dynamic\n              lua-expr(\"defaults.timeout_ms\")\n            entry point\n              lua-table(\"{ x = 12, y = 4 }\")\n            entry [expr:text_key]\n              tagged(!Date)\n                string(\"2026-01-01\")\n            spread common.service\n            conditional\n              if environment == \"production\"\n                mapping\n                  entry debug\n                    bool(false)\n              elseif environment == \"staging\"\n                mapping\n                  entry debug\n                    string(\"maybe\")\n              else\n                mapping\n                  entry debug\n                    bool(true)\n            loop key=name value=code in status_codes\n              entry [expr:name]\n                lua-expr(\"code\")\n      entry pipeline\n        sequence\n          directive include ./steps.luma\n          value\n            string(\"build\")\n          spread common.steps\n          conditional\n            if include_search\n              sequence\n                value\n                  string(\"search\")\n            else\n              sequence\n                value\n                  string(\"basic\")\n          loop value=name in names\n            value\n              mapping\n                entry id\n                  lua-expr(\"name\")\n"
+    "doc\n  directive version 0.1\n  directive profile safe\n  directive schema ./schemas/service.schema.lyma\n  directive import ./common.lyma as common\n  directive include ./base.lyma\n  directive use std.text as text\n  directive lua return {\\n  trim = function(x)\\n    return x\\n  end,\\n}\\n\n  directive meta\n    entry title\n      string(\"Example\")\n    entry generated\n      bool(false)\n  let defaults\n    mapping\n      entry retries\n        number(3)\n      entry timeout_ms\n        number(1000)\n  comment block \"block\\ncomment\"\n  root\n    mapping\n      entry service\n        tagged(!Service)\n          mapping\n            entry description\n              block-folded(\"This becomes a paragraph with folded lines.\\n\\nAnd a new paragraph.\\n\")\n            entry script\n              lua-chunk(\"return function()\\n  return true\\nend\")\n            entry record\n              lua-expr-block(\"make_record({ id = \\\"example\\\" })\\n\")\n            entry dynamic\n              lua-expr(\"defaults.timeout_ms\")\n            entry point\n              lua-table(\"{ x = 12, y = 4 }\")\n            entry [expr:text_key]\n              tagged(!Date)\n                string(\"2026-01-01\")\n            spread common.service\n            conditional\n              if environment == \"production\"\n                mapping\n                  entry debug\n                    bool(false)\n              elseif environment == \"staging\"\n                mapping\n                  entry debug\n                    string(\"maybe\")\n              else\n                mapping\n                  entry debug\n                    bool(true)\n            loop key=name value=code in status_codes\n              entry [expr:name]\n                lua-expr(\"code\")\n      entry pipeline\n        sequence\n          directive include ./steps.lyma\n          value\n            string(\"build\")\n          spread common.steps\n          conditional\n            if include_search\n              sequence\n                value\n                  string(\"search\")\n            else\n              sequence\n                value\n                  string(\"basic\")\n          loop value=name in names\n            value\n              mapping\n                entry id\n                  lua-expr(\"name\")\n"
 }
 
 fn expected_stream_snapshot() -> &'static str {
     "doc separator\n  directive meta\n    entry title\n      string(\"first\")\n  root\n    mapping\n      entry root\n        string(\"one\")\n  terminator\ndoc separator\n  comment line \"line comment\"\n  root\n    mapping\n      entry value\n        tagged(!Tag)\n          mapping\n            entry nested\n              string(\"two\")\n"
 }
 
-fn snapshot(file: &LumaFile) -> String {
+fn snapshot(file: &LymaFile) -> String {
     let mut out = String::new();
     for document in &file.documents {
         out.push_str("doc");
@@ -132,20 +132,20 @@ fn render_document_item(item: &DocumentItem, depth: usize, out: &mut String) {
     }
 }
 
-fn render_node(node: &LumaNode, depth: usize, out: &mut String) {
+fn render_node(node: &LymaNode, depth: usize, out: &mut String) {
     match node {
-        LumaNode::Null { .. } => line(depth, "null", out),
-        LumaNode::Boolean { value, .. } => line(depth, &format!("bool({value})"), out),
-        LumaNode::Number(number) => line(depth, &format!("number({})", number.lexeme), out),
-        LumaNode::String(string) => {
+        LymaNode::Null { .. } => line(depth, "null", out),
+        LymaNode::Boolean { value, .. } => line(depth, &format!("bool({value})"), out),
+        LymaNode::Number(number) => line(depth, &format!("number({})", number.lexeme), out),
+        LymaNode::String(string) => {
             let kind = match string.block_kind {
-                Some(luma_syntax::BlockKind::Folded) => "block-folded",
-                Some(luma_syntax::BlockKind::Literal) => "block-literal",
+                Some(lyma_syntax::BlockKind::Folded) => "block-folded",
+                Some(lyma_syntax::BlockKind::Literal) => "block-literal",
                 _ => "string",
             };
             line(depth, &format!("{kind}({:?})", string.value), out);
         }
-        LumaNode::Sequence(sequence) => {
+        LymaNode::Sequence(sequence) => {
             line(depth, "sequence", out);
             for item in &sequence.items {
                 match item {
@@ -178,22 +178,22 @@ fn render_node(node: &LumaNode, depth: usize, out: &mut String) {
                 }
             }
         }
-        LumaNode::Mapping(mapping) => {
+        LymaNode::Mapping(mapping) => {
             line(depth, "mapping", out);
             render_mapping_items(&mapping.items, depth + 1, out);
         }
-        LumaNode::Tagged(tagged) => {
+        LymaNode::Tagged(tagged) => {
             line(depth, &format!("tagged(!{})", tagged.tag.name.value), out);
             if let Some(value) = &tagged.value {
                 render_node(value, depth + 1, out);
             }
         }
-        LumaNode::LuaExpression(expr) => line(depth, &format!("lua-expr({:?})", expr.source), out),
-        LumaNode::LuaExpressionBlock(expr) => {
+        LymaNode::LuaExpression(expr) => line(depth, &format!("lua-expr({:?})", expr.source), out),
+        LymaNode::LuaExpressionBlock(expr) => {
             line(depth, &format!("lua-expr-block({:?})", expr.source), out)
         }
-        LumaNode::LuaChunk(expr) => line(depth, &format!("lua-chunk({:?})", expr.source), out),
-        LumaNode::LuaTableConstructor(expr) => {
+        LymaNode::LuaChunk(expr) => line(depth, &format!("lua-chunk({:?})", expr.source), out),
+        LymaNode::LuaTableConstructor(expr) => {
             line(depth, &format!("lua-table({:?})", expr.source), out)
         }
     }
@@ -302,7 +302,7 @@ fn render_directive(directive: &Directive, depth: usize, out: &mut String) {
 }
 
 fn render_mapping_conditional(
-    block: &luma_syntax::ConditionalBlock<luma_syntax::MappingBlock>,
+    block: &lyma_syntax::ConditionalBlock<lyma_syntax::MappingBlock>,
     depth: usize,
     out: &mut String,
 ) {
@@ -331,7 +331,7 @@ fn render_mapping_conditional(
 }
 
 fn render_sequence_conditional(
-    block: &luma_syntax::ConditionalBlock<luma_syntax::SequenceBlock>,
+    block: &lyma_syntax::ConditionalBlock<lyma_syntax::SequenceBlock>,
     depth: usize,
     out: &mut String,
 ) {
@@ -359,27 +359,27 @@ fn render_sequence_conditional(
     }
 }
 
-fn key_name(key: &luma_syntax::MappingKey) -> String {
+fn key_name(key: &lyma_syntax::MappingKey) -> String {
     match key {
-        luma_syntax::MappingKey::Plain { value, .. } => value.clone(),
-        luma_syntax::MappingKey::Quoted(node) => node.value.clone(),
-        luma_syntax::MappingKey::Expression { expression, .. } => {
+        lyma_syntax::MappingKey::Plain { value, .. } => value.clone(),
+        lyma_syntax::MappingKey::Quoted(node) => node.value.clone(),
+        lyma_syntax::MappingKey::Expression { expression, .. } => {
             format!("[expr:{}]", expression.source)
         }
     }
 }
 
-fn kind_name_comment(comment: &luma_syntax::Comment) -> &'static str {
+fn kind_name_comment(comment: &lyma_syntax::Comment) -> &'static str {
     match comment.kind {
-        luma_syntax::CommentKind::Line => "line",
-        luma_syntax::CommentKind::Block => "block",
+        lyma_syntax::CommentKind::Line => "line",
+        lyma_syntax::CommentKind::Block => "block",
     }
 }
 
-fn loop_bindings<T>(block: &luma_syntax::LoopBlock<T>) -> String {
+fn loop_bindings<T>(block: &lyma_syntax::LoopBlock<T>) -> String {
     match &block.bindings {
-        luma_syntax::LoopBindings::One { value, .. } => format!("value={value}"),
-        luma_syntax::LoopBindings::Two { key, value, .. } => format!("key={key} value={value}"),
+        lyma_syntax::LoopBindings::One { value, .. } => format!("value={value}"),
+        lyma_syntax::LoopBindings::Two { key, value, .. } => format!("key={key} value={value}"),
     }
 }
 

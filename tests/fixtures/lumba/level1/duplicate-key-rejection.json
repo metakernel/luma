@@ -1,7 +1,0 @@
-{
-  "name": "duplicate-key-rejection",
-  "kind": "encode-error",
-  "documents": ["{ dup: 1, dup: 2 }"],
-  "expected_error": "LB0016",
-  "notes": "No .lumba fixture is checked in because canonical Level 1 encoding must reject duplicate canonical map keys."
-}

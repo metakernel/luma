@@ -5,33 +5,33 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use luma::tooling::format_document_edit;
-use luma_parser::{FileId, decode_bytes, parse_str};
-use luma_syntax::DiagnosticCode;
+use lyma::tooling::format_document_edit;
+use lyma_parser::{FileId, decode_bytes, parse_str};
+use lyma_syntax::DiagnosticCode;
 
 #[cfg(feature = "eval")]
-use luma_eval::{
+use lyma_eval::{
     FilesystemResolver, InMemoryResolver, ResolutionContext, ResolutionKind, ResolutionRequest,
     ResolverPolicy, ResourceResolver,
 };
 
 #[cfg(all(feature = "eval", feature = "engine-omnilua"))]
-use luma_engine_omnilua::OmniLuaEngine;
+use lyma_engine_omnilua::OmniLuaEngine;
 #[cfg(all(feature = "eval", feature = "engine-omnilua"))]
-use luma_runtime::{
+use lyma_runtime::{
     ConversionPolicy, LuaRuntimeEngine, LuaSourceText, RuntimeEnvironment,
     RuntimeEnvironmentFactory, RuntimeLimits, RuntimeModuleFactory, RuntimeValueCodec,
 };
 #[cfg(all(feature = "eval", feature = "engine-omnilua"))]
-use luma_syntax::{FileId as EvalFileId, LumaNumber, LumaValue, source::Span};
+use lyma_syntax::{FileId as EvalFileId, LymaNumber, LymaValue, source::Span};
 
 #[test]
 fn decoder_and_parser_handle_adversarial_inputs_without_panicking() {
-    let invalid = decode_bytes(FileId(1), "invalid.luma", &[0xff, 0xfe, 0x80]).unwrap_err();
+    let invalid = decode_bytes(FileId(1), "invalid.lyma", &[0xff, 0xfe, 0x80]).unwrap_err();
     assert_eq!(invalid.diagnostics[0].code, DiagnosticCode::InvalidUtf8);
 
     let huge_indent = format!("{}value: true\n", " ".repeat(32_768));
-    let parsed = parse_str(FileId(2), "huge-indent.luma", &huge_indent);
+    let parsed = parse_str(FileId(2), "huge-indent.lyma", &huge_indent);
     assert!(!parsed.file.documents.is_empty() || !parsed.diagnostics.is_empty());
 
     let mut nested = String::new();
@@ -42,8 +42,8 @@ fn decoder_and_parser_handle_adversarial_inputs_without_panicking() {
     nested.push_str(&"  ".repeat(128));
     nested.push_str("leaf: true\n");
 
-    let parsed = parse_str(FileId(3), "deep.luma", &nested);
-    let formatted = format_document_edit("deep.luma", &nested);
+    let parsed = parse_str(FileId(3), "deep.lyma", &nested);
+    let formatted = format_document_edit("deep.lyma", &nested);
     assert!(parsed.diagnostics.is_empty(), "{:#?}", parsed.diagnostics);
     assert!(
         formatted.parsed.diagnostics.is_empty(),
@@ -147,12 +147,12 @@ fn resolver_defaults_reject_traversal_bad_schemes_network_and_cycles() {
 #[cfg(feature = "eval")]
 #[test]
 fn filesystem_resolver_blocks_symlink_root_escape() {
-    let root = TempTree::new("luma-security-root");
-    let outside = TempTree::new("luma-security-outside");
-    fs::write(outside.path().join("secret.luma"), "value: secret\n").unwrap();
+    let root = TempTree::new("lyma-security-root");
+    let outside = TempTree::new("lyma-security-outside");
+    fs::write(outside.path().join("secret.lyma"), "value: secret\n").unwrap();
 
-    let link = root.path().join("escape.luma");
-    if let Err(error) = create_symlink_or_junction(&outside.path().join("secret.luma"), &link) {
+    let link = root.path().join("escape.lyma");
+    if let Err(error) = create_symlink_or_junction(&outside.path().join("secret.lyma"), &link) {
         if is_symlink_permission_error(&error) {
             eprintln!("skipping symlink escape test: {error}");
             return;
@@ -166,7 +166,7 @@ fn filesystem_resolver_blocks_symlink_root_escape() {
     let error = resolver
         .resolve(ResolutionRequest {
             kind: ResolutionKind::Import,
-            specifier: "escape.luma",
+            specifier: "escape.lyma",
             from: None,
             context: &mut context,
         })
@@ -186,7 +186,7 @@ fn omnilua_safe_defaults_block_escape_hatches_and_secret_access() {
         let value = eval_expr(&engine, &mut environment, expr, span, &limits).unwrap();
         assert_eq!(
             value,
-            LumaValue::Null(luma_syntax::LumaNull),
+            LymaValue::Null(lyma_syntax::LymaNull),
             "expr: {expr}"
         );
     }
@@ -279,7 +279,7 @@ fn omnilua_reports_cyclic_tables_and_read_only_modules() {
         .evaluate_chunk(&compiled, &mut environment, &limits)
         .unwrap();
     let error = engine
-        .to_luma_value(
+        .to_lyma_value(
             &value,
             &ConversionPolicy {
                 origin_span: Some(span),
@@ -296,7 +296,7 @@ fn omnilua_reports_cyclic_tables_and_read_only_modules() {
             vec![(
                 String::from("answer"),
                 engine
-                    .from_luma_value(&LumaValue::Number(LumaNumber::Integer(42)))
+                    .from_lyma_value(&LymaValue::Number(LymaNumber::Integer(42)))
                     .unwrap(),
             )],
         )
@@ -314,13 +314,13 @@ fn eval_chunk(
     source: &str,
     span: Span,
     limits: &RuntimeLimits,
-) -> Result<LumaValue, luma_runtime::LuaRuntimeError> {
+) -> Result<LymaValue, lyma_runtime::LuaRuntimeError> {
     let compiled = engine.compile_chunk(
         LuaSourceText::new("security", source).with_span(span),
         limits,
     )?;
     let value = engine.evaluate_chunk(&compiled, environment, limits)?;
-    engine.to_luma_value(
+    engine.to_lyma_value(
         &value,
         &ConversionPolicy {
             origin_span: Some(span),
@@ -336,13 +336,13 @@ fn eval_expr(
     source: &str,
     span: Span,
     limits: &RuntimeLimits,
-) -> Result<LumaValue, luma_runtime::LuaRuntimeError> {
+) -> Result<LymaValue, lyma_runtime::LuaRuntimeError> {
     let compiled = engine.compile_expression(
         LuaSourceText::new("security-expr", source).with_span(span),
         limits,
     )?;
     let value = engine.evaluate_expression(&compiled, environment, limits)?;
-    engine.to_luma_value(
+    engine.to_lyma_value(
         &value,
         &ConversionPolicy {
             origin_span: Some(span),

@@ -1,21 +1,21 @@
 use std::collections::BTreeMap;
 
 #[cfg(feature = "engine-omnilua")]
-use luma_engine_omnilua::OmniLuaEngine;
-use luma_eval::{
+use lyma_engine_omnilua::OmniLuaEngine;
+use lyma_eval::{
     AstEvaluator, EvaluationOptions, EvaluationProfile, InMemoryModuleRegistry, InMemoryResolver,
     ModuleRegistry, ResolverPolicy, ResourceResolver, UnknownTagPolicy,
 };
-use luma_parser::parse_str;
-use luma_runtime::{
+use lyma_parser::parse_str;
+use lyma_runtime::{
     ConversionPolicy, Engine, LuaRuntimeEngine, LuaRuntimeError, LuaRuntimePhase, LuaSourceText,
     RuntimeEnvironment, RuntimeEnvironmentFactory, RuntimeLimits, RuntimeModule,
     RuntimeModuleFactory, RuntimeValueCodec,
 };
-use luma_syntax::{FileId, LumaKey, LumaMapping, LumaNull, LumaNumber, LumaSequence, LumaValue};
+use lyma_syntax::{FileId, LymaKey, LymaMapping, LymaNull, LymaNumber, LymaSequence, LymaValue};
 
 #[derive(Debug, Clone, PartialEq)]
-struct MockValue(LumaValue);
+struct MockValue(LymaValue);
 
 #[derive(Debug, Clone, PartialEq)]
 struct MockModule {
@@ -112,15 +112,15 @@ impl RuntimeValueCodec for MockEngine {
     type Value = MockValue;
     type FrozenValue = MockValue;
 
-    fn to_luma_value(
+    fn to_lyma_value(
         &self,
         value: &Self::Value,
         _policy: &ConversionPolicy,
-    ) -> Result<LumaValue, LuaRuntimeError> {
+    ) -> Result<LymaValue, LuaRuntimeError> {
         Ok(value.0.clone())
     }
 
-    fn from_luma_value(&self, value: &LumaValue) -> Result<Self::Value, LuaRuntimeError> {
+    fn from_lyma_value(&self, value: &LymaValue) -> Result<Self::Value, LuaRuntimeError> {
         Ok(MockValue(value.clone()))
     }
 
@@ -166,7 +166,7 @@ impl LuaRuntimeEngine for MockEngine {
         if limits.max_instructions == Some(0) {
             return Err(LuaRuntimeError::limit_exceeded(
                 self.engine_name(),
-                luma_runtime::RuntimeLimitKind::Instructions,
+                lyma_runtime::RuntimeLimitKind::Instructions,
                 None,
             ));
         }
@@ -182,7 +182,7 @@ impl LuaRuntimeEngine for MockEngine {
         if limits.max_instructions == Some(0) {
             return Err(LuaRuntimeError::limit_exceeded(
                 self.engine_name(),
-                luma_runtime::RuntimeLimitKind::Instructions,
+                lyma_runtime::RuntimeLimitKind::Instructions,
                 None,
             ));
         }
@@ -196,7 +196,7 @@ impl LuaRuntimeEngine for MockEngine {
 fn level2_evaluates_safe_profile_features_with_mock_engine() {
     let parsed = parse_str(
         FileId(1),
-        "level2.luma",
+        "level2.lyma",
         r#"@import "common" as common
 @include "base"
 @use safe.mod as safe
@@ -238,7 +238,7 @@ root:
     parent_timeout: =_parent.timeout
     path: =_path
     here: =_here
-    luma: =_luma
+    lyma: =_lyma
 "#,
     );
     assert!(parsed.diagnostics.is_empty(), "{:#?}", parsed.diagnostics);
@@ -258,7 +258,7 @@ root:
     })
     .with_module(
         "safe.mod",
-        vec![(String::from("enabled"), LumaValue::Boolean(true))],
+        vec![(String::from("enabled"), LymaValue::Boolean(true))],
     );
     let profile = EvaluationProfile::restricted();
     let options = EvaluationOptions {
@@ -275,120 +275,120 @@ root:
     };
 
     let [value] = evaluator
-        .evaluate_file(&parsed.file, "level2.luma", None)
+        .evaluate_file(&parsed.file, "level2.lyma", None)
         .expect("evaluation should succeed")
         .try_into()
         .expect("single document");
 
-    let LumaValue::Mapping(root) = value else {
+    let LymaValue::Mapping(root) = value else {
         panic!()
     };
     assert!(
         root.entries
             .iter()
-            .any(|entry| entry.key == LumaKey::String(String::from("base")))
+            .any(|entry| entry.key == LymaKey::String(String::from("base")))
     );
     assert!(
         root.entries
             .iter()
-            .any(|entry| entry.key == LumaKey::String(String::from("root")))
+            .any(|entry| entry.key == LymaKey::String(String::from("root")))
     );
 
     let root_value = root
         .entries
         .iter()
-        .find(|entry| entry.key == LumaKey::String(String::from("root")))
+        .find(|entry| entry.key == LymaKey::String(String::from("root")))
         .expect("root entry should exist");
-    let LumaValue::Mapping(body) = &root_value.value else {
+    let LymaValue::Mapping(body) = &root_value.value else {
         panic!()
     };
     assert_eq!(
         lookup(body, "timeout"),
-        &LumaValue::Number(LumaNumber::Integer(3))
+        &LymaValue::Number(LymaNumber::Integer(3))
     );
     assert_eq!(
         lookup(body, "imported"),
-        &LumaValue::Number(LumaNumber::Integer(42))
+        &LymaValue::Number(LymaNumber::Integer(42))
     );
-    assert_eq!(lookup(body, "module_enabled"), &LumaValue::Boolean(true));
+    assert_eq!(lookup(body, "module_enabled"), &LymaValue::Boolean(true));
     assert_eq!(
         lookup(body, "chunk"),
-        &LumaValue::String(String::from("chunk-ok"))
+        &LymaValue::String(String::from("chunk-ok"))
     );
-    assert_eq!(lookup(body, "maybe"), &LumaValue::Null(LumaNull));
+    assert_eq!(lookup(body, "maybe"), &LymaValue::Null(LymaNull));
     assert_eq!(
         lookup(body, "base"),
-        &LumaValue::String(String::from("core"))
+        &LymaValue::String(String::from("core"))
     );
     assert_eq!(
         lookup(body, "current_path"),
         &sequence([
-            LumaValue::String(String::from("root")),
-            LumaValue::String(String::from("current_path")),
+            LymaValue::String(String::from("root")),
+            LymaValue::String(String::from("current_path")),
         ])
     );
-    let LumaValue::Sequence(steps) = lookup(body, "steps") else {
+    let LymaValue::Sequence(steps) = lookup(body, "steps") else {
         panic!()
     };
     assert_eq!(steps.items.len(), 6);
-    assert_eq!(steps.items[1], LumaValue::String(String::from("alpha")));
-    assert_eq!(steps.items[5], LumaValue::String(String::from("b")));
-    let LumaValue::Mapping(statuses) = lookup(body, "statuses") else {
+    assert_eq!(steps.items[1], LymaValue::String(String::from("alpha")));
+    assert_eq!(steps.items[5], LymaValue::String(String::from("b")));
+    let LymaValue::Mapping(statuses) = lookup(body, "statuses") else {
         panic!()
     };
-    assert_eq!(lookup(statuses, "ok"), &LumaValue::Boolean(true));
-    assert_eq!(lookup(statuses, "warn"), &LumaValue::Boolean(false));
-    let LumaValue::Mapping(nested) = lookup(body, "nested") else {
+    assert_eq!(lookup(statuses, "ok"), &LymaValue::Boolean(true));
+    assert_eq!(lookup(statuses, "warn"), &LymaValue::Boolean(false));
+    let LymaValue::Mapping(nested) = lookup(body, "nested") else {
         panic!()
     };
     assert_eq!(
         lookup(nested, "local_mode"),
-        &LumaValue::String(String::from("prod"))
+        &LymaValue::String(String::from("prod"))
     );
-    assert_eq!(lookup(nested, "root_base"), &LumaValue::Boolean(true));
+    assert_eq!(lookup(nested, "root_base"), &LymaValue::Boolean(true));
     assert_eq!(
         lookup(nested, "parent_timeout"),
-        &LumaValue::Number(LumaNumber::Integer(3))
+        &LymaValue::Number(LymaNumber::Integer(3))
     );
     assert_eq!(
         lookup(nested, "path"),
         &sequence([
-            LumaValue::String(String::from("root")),
-            LumaValue::String(String::from("nested")),
-            LumaValue::String(String::from("path")),
+            LymaValue::String(String::from("root")),
+            LymaValue::String(String::from("nested")),
+            LymaValue::String(String::from("path")),
         ])
     );
     assert_eq!(
-        lookup(nested, "luma"),
-        &LumaValue::String(String::from("luma"))
+        lookup(nested, "lyma"),
+        &LymaValue::String(String::from("lyma"))
     );
-    let LumaValue::Mapping(here) = lookup(nested, "here") else {
+    let LymaValue::Mapping(here) = lookup(nested, "here") else {
         panic!()
     };
     assert_eq!(
         lookup(here, "local_mode"),
-        &LumaValue::String(String::from("prod"))
+        &LymaValue::String(String::from("prod"))
     );
-    assert_eq!(lookup(here, "root_base"), &LumaValue::Boolean(true));
+    assert_eq!(lookup(here, "root_base"), &LymaValue::Boolean(true));
 }
 
 #[test]
 fn level2_rejects_forbidden_runtime_capabilities_as_e0019() {
-    let parsed = parse_str(FileId(2), "unsafe.luma", "value: =_G\n");
+    let parsed = parse_str(FileId(2), "unsafe.lyma", "value: =_G\n");
     let evaluator = AstEvaluator {
         engine: &MockEngine,
         options: EvaluationOptions::<MockEngine>::default(),
     };
 
     let error = evaluator
-        .evaluate_file(&parsed.file, "unsafe.luma", None)
+        .evaluate_file(&parsed.file, "unsafe.lyma", None)
         .expect_err("unsafe source should fail");
     assert_eq!(error.diagnostic.code.code(), "E0019");
 }
 
 #[test]
 fn level2_surfaces_runtime_limit_failures_as_e0020() {
-    let parsed = parse_str(FileId(3), "limits.luma", "value: =answer\n");
+    let parsed = parse_str(FileId(3), "limits.lyma", "value: =answer\n");
     let mut profile = EvaluationProfile::restricted();
     profile.runtime_limits.max_instructions = Some(0);
     let evaluator = AstEvaluator {
@@ -400,7 +400,7 @@ fn level2_surfaces_runtime_limit_failures_as_e0020() {
     };
 
     let error = evaluator
-        .evaluate_file(&parsed.file, "limits.luma", None)
+        .evaluate_file(&parsed.file, "limits.lyma", None)
         .expect_err("limit failure should surface");
     assert_eq!(error.diagnostic.code.code(), "E0020");
 }
@@ -410,7 +410,7 @@ fn level2_surfaces_runtime_limit_failures_as_e0020() {
 fn level2_evaluates_safe_profile_features_with_omnilua_engine() {
     let parsed = parse_str(
         FileId(4),
-        "level2-omnilua.luma",
+        "level2-omnilua.lyma",
         r#"@import "common" as common
 @include "base"
 @use safe.mod as safe
@@ -471,7 +471,7 @@ root:
     })
     .with_module(
         "safe.mod",
-        vec![(String::from("enabled"), LumaValue::Boolean(true))],
+        vec![(String::from("enabled"), LymaValue::Boolean(true))],
     );
     let profile = omnilua_safe_profile();
     let engine = OmniLuaEngine::default();
@@ -488,62 +488,62 @@ root:
     };
 
     let [value] = evaluator
-        .evaluate_file(&parsed.file, "level2-omnilua.luma", None)
+        .evaluate_file(&parsed.file, "level2-omnilua.lyma", None)
         .expect("evaluation should succeed")
         .try_into()
         .expect("single document");
 
-    let LumaValue::Mapping(root) = value else {
+    let LymaValue::Mapping(root) = value else {
         panic!()
     };
     let root_value = root
         .entries
         .iter()
-        .find(|entry| entry.key == LumaKey::String(String::from("root")))
+        .find(|entry| entry.key == LymaKey::String(String::from("root")))
         .expect("root entry should exist");
-    let LumaValue::Mapping(body) = &root_value.value else {
+    let LymaValue::Mapping(body) = &root_value.value else {
         panic!()
     };
     assert_eq!(
         lookup(body, "imported"),
-        &LumaValue::Number(LumaNumber::Integer(42))
+        &LymaValue::Number(LymaNumber::Integer(42))
     );
-    assert_eq!(lookup(body, "module_enabled"), &LumaValue::Boolean(true));
+    assert_eq!(lookup(body, "module_enabled"), &LymaValue::Boolean(true));
     assert_eq!(
         lookup(body, "chunk"),
-        &LumaValue::String(String::from("CHUNK-OK"))
+        &LymaValue::String(String::from("CHUNK-OK"))
     );
     assert_eq!(
         lookup(body, "current_path"),
         &sequence([
-            LumaValue::String(String::from("root")),
-            LumaValue::String(String::from("current_path")),
+            LymaValue::String(String::from("root")),
+            LymaValue::String(String::from("current_path")),
         ])
     );
-    let LumaValue::Sequence(steps) = lookup(body, "steps") else {
+    let LymaValue::Sequence(steps) = lookup(body, "steps") else {
         panic!()
     };
-    assert_eq!(steps.items[4], LumaValue::String(String::from("A")));
-    assert_eq!(steps.items[5], LumaValue::String(String::from("B")));
-    let LumaValue::Mapping(nested) = lookup(body, "nested") else {
+    assert_eq!(steps.items[4], LymaValue::String(String::from("A")));
+    assert_eq!(steps.items[5], LymaValue::String(String::from("B")));
+    let LymaValue::Mapping(nested) = lookup(body, "nested") else {
         panic!()
     };
     assert_eq!(
         lookup(nested, "local_mode"),
-        &LumaValue::String(String::from("prod"))
+        &LymaValue::String(String::from("prod"))
     );
-    assert_eq!(lookup(nested, "root_base"), &LumaValue::Boolean(true));
+    assert_eq!(lookup(nested, "root_base"), &LymaValue::Boolean(true));
     assert_eq!(
         lookup(nested, "parent_timeout"),
-        &LumaValue::Number(LumaNumber::Integer(3))
+        &LymaValue::Number(LymaNumber::Integer(3))
     );
     assert_eq!(
         lookup(nested, "path_joined"),
-        &LumaValue::String(String::from("root/nested/path_joined"))
+        &LymaValue::String(String::from("root/nested/path_joined"))
     );
     assert_eq!(
         lookup(nested, "path_tail"),
-        &LumaValue::String(String::from("path_tail"))
+        &LymaValue::String(String::from("path_tail"))
     );
 }
 
@@ -557,13 +557,13 @@ fn level2_omnilua_rejects_forbidden_capabilities_and_escape_attempts() {
         "value: |lua-\n  return getmetatable(math)\n",
         "value: =math.random()\n",
     ] {
-        let parsed = parse_str(FileId(5), "unsafe-omnilua.luma", source);
+        let parsed = parse_str(FileId(5), "unsafe-omnilua.lyma", source);
         let evaluator = AstEvaluator {
             engine: &engine,
             options: EvaluationOptions::<OmniLuaEngine>::default(),
         };
         let error = evaluator
-            .evaluate_file(&parsed.file, "unsafe-omnilua.luma", None)
+            .evaluate_file(&parsed.file, "unsafe-omnilua.lyma", None)
             .expect_err("unsafe source should fail");
         assert_eq!(error.diagnostic.code.code(), "E0019", "source: {source}");
     }
@@ -574,7 +574,7 @@ fn level2_omnilua_rejects_forbidden_capabilities_and_escape_attempts() {
 fn level2_omnilua_surfaces_resource_limit_failures_as_e0020() {
     let parsed = parse_str(
         FileId(6),
-        "limits-omnilua.luma",
+        "limits-omnilua.lyma",
         "value: ={ alpha = 1, beta = 2, gamma = 3 }\n",
     );
     let mut profile = omnilua_safe_profile();
@@ -589,22 +589,22 @@ fn level2_omnilua_surfaces_resource_limit_failures_as_e0020() {
     };
 
     let error = evaluator
-        .evaluate_file(&parsed.file, "limits-omnilua.luma", None)
+        .evaluate_file(&parsed.file, "limits-omnilua.lyma", None)
         .expect_err("limit failure should surface");
     assert_eq!(error.diagnostic.code.code(), "E0020");
 }
 
-fn lookup<'a>(mapping: &'a LumaMapping, key: &str) -> &'a LumaValue {
+fn lookup<'a>(mapping: &'a LymaMapping, key: &str) -> &'a LymaValue {
     &mapping
         .entries
         .iter()
-        .find(|entry| entry.key == LumaKey::String(String::from(key)))
+        .find(|entry| entry.key == LymaKey::String(String::from(key)))
         .unwrap()
         .value
 }
 
-fn sequence<const N: usize>(items: [LumaValue; N]) -> LumaValue {
-    LumaValue::Sequence(LumaSequence {
+fn sequence<const N: usize>(items: [LymaValue; N]) -> LymaValue {
+    LymaValue::Sequence(LymaSequence {
         items: items.into_iter().collect(),
         span: None,
     })
@@ -623,31 +623,31 @@ fn omnilua_safe_profile() -> EvaluationProfile {
 fn eval_mock_expression(
     source: &str,
     environment: &MockEnvironment,
-) -> Result<LumaValue, LuaRuntimeError> {
+) -> Result<LymaValue, LuaRuntimeError> {
     let trimmed = source.trim();
     if trimmed == "nil" {
-        return Ok(LumaValue::Null(LumaNull));
+        return Ok(LymaValue::Null(LymaNull));
     }
     if trimmed == "true" {
-        return Ok(LumaValue::Boolean(true));
+        return Ok(LymaValue::Boolean(true));
     }
     if trimmed == "false" {
-        return Ok(LumaValue::Boolean(false));
+        return Ok(LymaValue::Boolean(false));
     }
     if let Some(value) = trimmed
         .strip_prefix('"')
         .and_then(|value| value.strip_suffix('"'))
     {
-        return Ok(LumaValue::String(String::from(value)));
+        return Ok(LymaValue::String(String::from(value)));
     }
     if let Some((left, right)) = trimmed.split_once("==") {
-        return Ok(LumaValue::Boolean(
+        return Ok(LymaValue::Boolean(
             eval_mock_expression(left.trim(), environment)?
                 == eval_mock_expression(right.trim(), environment)?,
         ));
     }
     if let Ok(number) = trimmed.parse::<i64>() {
-        return Ok(LumaValue::Number(LumaNumber::Integer(number)));
+        return Ok(LymaValue::Number(LymaNumber::Integer(number)));
     }
 
     let mut parts = trimmed.split('.');
@@ -658,7 +658,7 @@ fn eval_mock_expression(
         .ok_or_else(|| {
             LuaRuntimeError::runtime_error(
                 "mock",
-                LuaRuntimePhase::Evaluate(luma_runtime::LuaChunkKind::Expression),
+                LuaRuntimePhase::Evaluate(lyma_runtime::LuaChunkKind::Expression),
                 format!("unknown symbol: {first}"),
                 None,
             )
@@ -667,11 +667,11 @@ fn eval_mock_expression(
         .clone();
     for part in parts {
         value = match value {
-            LumaValue::Mapping(mapping) => lookup(&mapping, part).clone(),
+            LymaValue::Mapping(mapping) => lookup(&mapping, part).clone(),
             _ => {
                 return Err(LuaRuntimeError::runtime_error(
                     "mock",
-                    LuaRuntimePhase::Evaluate(luma_runtime::LuaChunkKind::Expression),
+                    LuaRuntimePhase::Evaluate(lyma_runtime::LuaChunkKind::Expression),
                     format!("cannot index {part}"),
                     None,
                 ));

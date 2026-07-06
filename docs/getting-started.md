@@ -1,14 +1,14 @@
 # Getting started
 
-## What Luma is
+## What Lyma is
 
-Luma means **LUa Markup Assembly**. The workspace is split so parsing is independent from evaluation:
+Lyma means **LUa Markup Assembly**. The workspace is split so parsing is independent from evaluation:
 
-- parse/format with `luma-parser`
-- bridge Serde data with `luma-serde`
-- evaluate with `luma-eval`
-- plug in a backend through `luma-runtime`
-- use `luma-engine-omnilua` when you want a ready-made Lua engine
+- parse/format with `lyma-parser`
+- bridge Serde data with `lyma-serde`
+- evaluate with `lyma-eval`
+- plug in a backend through `lyma-runtime`
+- use `lyma-engine-omnilua` when you want a ready-made Lua engine
 
 Parser APIs are **engine-agnostic** and **safe by default**.
 
@@ -18,7 +18,7 @@ Parser APIs are **engine-agnostic** and **safe by default**.
 
 ```toml
 [dependencies]
-luma = "0.1"
+lyma = "0.1"
 ```
 
 Default features enable `parser` only.
@@ -27,42 +27,42 @@ Default features enable `parser` only.
 
 ```toml
 [dependencies]
-luma = { version = "0.1", features = ["eval", "engine-omnilua"] }
+lyma = { version = "0.1", features = ["eval", "engine-omnilua"] }
 ```
 
 ### Parser + Serde bridge
 
 ```toml
 [dependencies]
-luma = { version = "0.1", features = ["serde"] }
+lyma = { version = "0.1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 ```
 
-### Parser + LUMBA binary support
+### Parser + LYBA binary support
 
 ```toml
 [dependencies]
-luma = { version = "0.1", features = ["lumba"] }
+lyma = { version = "0.1", features = ["lyba"] }
 ```
 
-The `lumba` feature adds the inert binary container API as `luma::lumba`. It
+The `lyba` feature adds the inert binary container API as `lyma::lyba`. It
 does not enable evaluation, Lua, or OmniLua.
 
 ## Parse a document
 
 ```rust
-use luma::parser::{FileId, parse_str};
+use lyma::parser::{FileId, parse_str};
 
-let parsed = parse_str(FileId(1), "service.luma", "name: api\nreplicas: 3\n");
+let parsed = parse_str(FileId(1), "service.lyma", "name: api\nreplicas: 3\n");
 assert!(parsed.diagnostics.is_empty());
 ```
 
 ## Format a document
 
 ```rust
-let result = luma::parser::format_str(
-    luma::parser::FileId(1),
-    "service.luma",
+let result = lyma::parser::format_str(
+    lyma::parser::FileId(1),
+    "service.lyma",
     "name:'api'\n",
 );
 
@@ -70,7 +70,7 @@ assert!(result.parsed.diagnostics.is_empty());
 assert_eq!(result.formatted.text, "name: api\n");
 ```
 
-## Serialize to canonical Luma text
+## Serialize to canonical Lyma text
 
 ```rust
 use serde::Serialize;
@@ -81,23 +81,23 @@ struct Config<'a> {
     enabled: bool,
 }
 
-let text = luma::serde::to_string(&Config {
+let text = lyma::serde::to_string(&Config {
     name: "api",
     enabled: true,
 })?;
 
 assert_eq!(text, "enabled: true\nname: api\n");
-# Ok::<(), luma::serde::Error>(())
+# Ok::<(), lyma::serde::Error>(())
 ```
 
-The facade helpers are `luma::serde::to_value`, `to_string`, `to_string_with_options`, and `from_value`. Text serialization is canonical and requires string mapping keys.
+The facade helpers are `lyma::serde::to_value`, `to_string`, `to_string_with_options`, and `from_value`. Text serialization is canonical and requires string mapping keys.
 
-## Encode and decode LUMBA
+## Encode and decode LYBA
 
 ```rust
-use luma::lumba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
+use lyma::lyba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
 
-let file = luma::lumba::LumbaFile::new().with_document(
+let file = lyma::lyba::LybaFile::new().with_document(
     Document::new().with_root_value(Value::String(String::from("hello"))),
 );
 
@@ -105,21 +105,21 @@ let bytes = Writer::new(WriteOptions::new().with_limits(Limits::public())).write
 let decoded = Reader::new(ReadOptions::new().with_limits(Limits::public())).read(&bytes)?;
 
 assert_eq!(decoded.documents.len(), 1);
-# Ok::<(), luma::lumba::LumbaError>(())
+# Ok::<(), lyma::lyba::LybaError>(())
 ```
 
-LUMBA loading is parse-only and inert: no Lua execution, no chunk compilation,
+LYBA loading is parse-only and inert: no Lua execution, no chunk compilation,
 no resolver/module activation, and no automatic import handling.
 
 ## Evaluate with OmniLua
 
 ```rust
-use luma::engine_omnilua::OmniLuaEngine;
-use luma::eval::{AstEvaluator, EvaluationOptions, EvaluationProfile};
-use luma::parser::{FileId, parse_str};
-use luma::runtime::RuntimeLimits;
+use lyma::engine_omnilua::OmniLuaEngine;
+use lyma::eval::{AstEvaluator, EvaluationOptions, EvaluationProfile};
+use lyma::parser::{FileId, parse_str};
+use lyma::runtime::RuntimeLimits;
 
-let parsed = parse_str(FileId(1), "calc.luma", "value: =21 * 2\n");
+let parsed = parse_str(FileId(1), "calc.lyma", "value: =21 * 2\n");
 let engine = OmniLuaEngine::default();
 let profile = EvaluationProfile::permissive(RuntimeLimits::unbounded());
 let evaluator = AstEvaluator {
@@ -130,8 +130,8 @@ let evaluator = AstEvaluator {
     },
 };
 
-let values = evaluator.evaluate_file(&parsed.file, "calc.luma", None)?;
-# Ok::<(), luma::eval::EvaluationError>(())
+let values = evaluator.evaluate_file(&parsed.file, "calc.lyma", None)?;
+# Ok::<(), lyma::eval::EvaluationError>(())
 ```
 
 `EvaluationOptions::default()` is intentionally minimal and may fail closed on backends that cannot enforce every restricted runtime limit:
@@ -143,7 +143,7 @@ let values = evaluator.evaluate_file(&parsed.file, "calc.luma", None)?;
 - no schema validator
 - unknown tags rejected for schema-validated documents
 
-For LUMBA, `Limits::default()` equals `Limits::public()`: public trust policy,
+For LYBA, `Limits::default()` equals `Limits::public()`: public trust policy,
 8 MiB max input, 16 MiB max decoded logical section bytes, 2 MiB max stored
 section payload, 64 KiB max blob display, and 8 MiB max JSON output.
 
@@ -159,4 +159,4 @@ Use these extension points only when needed:
 
 See `docs/api.md` and `docs/security.md`.
 
-For CLI workflows see `docs/cli.md`, especially `cargo run -p luma-cli --features lumba -- lumba ...`.
+For CLI workflows see `docs/cli.md`, especially `cargo run -p lyma-cli --features lyba -- lyba ...`.

@@ -1,12 +1,12 @@
-use luma::parser::{FileId as ParserFileId, FormatRangeFallback, FormatRangeOptions};
-use luma::tooling::{
+use lyma::parser::{FileId as ParserFileId, FormatRangeFallback, FormatRangeOptions};
+use lyma::tooling::{
     TextRange, apply_text_edits, format_document_range_text_edits, format_document_text_edit,
     format_document_text_edits,
 };
-use luma::tooling::{format_document_edit, serialize_portable_value};
-use luma_parser::{FileId, parse_str};
-use luma_syntax::{
-    LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaSequence, LumaValue,
+use lyma::tooling::{format_document_edit, serialize_portable_value};
+use lyma_parser::{FileId, parse_str};
+use lyma_syntax::{
+    LymaKey, LymaMapping, LymaMappingEntry, LymaNull, LymaNumber, LymaSequence, LymaValue,
 };
 
 #[test]
@@ -17,14 +17,14 @@ fn formatter_is_idempotent_for_generated_portable_documents() {
         let value = generator.value(0);
         let source = serialize_portable_value(&value).expect("generated value should serialize");
 
-        let first = format_document_edit("generated.luma", &source);
+        let first = format_document_edit("generated.lyma", &source);
         assert!(
             first.parsed.diagnostics.is_empty(),
             "case {case}: {:#?}",
             first.parsed.diagnostics
         );
 
-        let second = format_document_edit("generated.luma", &first.formatted.text);
+        let second = format_document_edit("generated.lyma", &first.formatted.text);
         assert!(
             second.parsed.diagnostics.is_empty(),
             "case {case}: {:#?}",
@@ -45,14 +45,14 @@ fn parse_and_serialize_stay_stable_for_generated_values() {
         let value = generator.value(0);
         let serialized =
             serialize_portable_value(&value).expect("generated value should serialize");
-        let parsed = parse_str(FileId(1), "stable.luma", &serialized);
+        let parsed = parse_str(FileId(1), "stable.lyma", &serialized);
         assert!(
             parsed.diagnostics.is_empty(),
             "case {case}: {:#?}",
             parsed.diagnostics
         );
 
-        let formatted = format_document_edit("stable.luma", &serialized);
+        let formatted = format_document_edit("stable.lyma", &serialized);
         assert!(
             formatted.parsed.diagnostics.is_empty(),
             "case {case}: {:#?}",
@@ -63,7 +63,7 @@ fn parse_and_serialize_stay_stable_for_generated_values() {
             "canonical serialization should remain stable for case {case}"
         );
 
-        let reparsed = parse_str(FileId(2), "stable.luma", &formatted.formatted.text);
+        let reparsed = parse_str(FileId(2), "stable.lyma", &formatted.formatted.text);
         assert!(
             reparsed.diagnostics.is_empty(),
             "case {case}: {:#?}",
@@ -81,21 +81,21 @@ fn editor_formatting_edits_match_canonical_output_for_generated_documents() {
         let canonical = serialize_portable_value(&value).expect("generated value should serialize");
         let source = perturb_editor_source(&canonical, case);
 
-        let formatted = format_document_edit("editor-generated.luma", &source);
+        let formatted = format_document_edit("editor-generated.lyma", &source);
         assert!(
             formatted.parsed.diagnostics.is_empty(),
             "case {case}: {:#?}",
             formatted.parsed.diagnostics
         );
 
-        let (_, whole_edit) = format_document_text_edit("editor-generated.luma", &source);
+        let (_, whole_edit) = format_document_text_edit("editor-generated.lyma", &source);
         assert_eq!(
             apply_text_edits(&source, &[whole_edit]),
             Some(formatted.formatted.text.clone()),
             "whole-document edit mismatch for case {case}"
         );
 
-        let (_, minimal_edits) = format_document_text_edits("editor-generated.luma", &source);
+        let (_, minimal_edits) = format_document_text_edits("editor-generated.lyma", &source);
         assert_eq!(
             apply_text_edits(&source, &minimal_edits),
             Some(formatted.formatted.text.clone()),
@@ -104,7 +104,7 @@ fn editor_formatting_edits_match_canonical_output_for_generated_documents() {
 
         let normalized_source = formatted.parsed.source.as_str();
         let (_, range_edits) = format_document_range_text_edits(
-            "editor-generated.luma",
+            "editor-generated.lyma",
             normalized_source,
             TextRange::new(0, normalized_source.len()),
             FormatRangeOptions {
@@ -129,7 +129,7 @@ fn editor_parser_range_formatting_matches_tooling_for_generated_documents() {
         let value = generator.value(0);
         let canonical = serialize_portable_value(&value).expect("generated value should serialize");
         let source = perturb_editor_source(&canonical, case + 17);
-        let normalized = format_document_edit("editor-range.luma", &source)
+        let normalized = format_document_edit("editor-range.lyma", &source)
             .parsed
             .source;
         let normalized_source = normalized.as_str();
@@ -140,15 +140,15 @@ fn editor_parser_range_formatting_matches_tooling_for_generated_documents() {
         };
 
         let (_, tooling_edits) = format_document_range_text_edits(
-            "editor-range.luma",
+            "editor-range.lyma",
             normalized_source,
             range,
             options,
         )
         .expect("tooling range formatting should succeed");
-        let (parser_formatted, parser_edits) = luma::parser::format_range_edits(
+        let (parser_formatted, parser_edits) = lyma::parser::format_range_edits(
             ParserFileId(42),
-            "editor-range.luma",
+            "editor-range.lyma",
             normalized_source,
             range,
             options,
@@ -224,7 +224,7 @@ impl Generator {
         }
     }
 
-    fn value(&mut self, depth: usize) -> LumaValue {
+    fn value(&mut self, depth: usize) -> LymaValue {
         if depth >= Self::MAX_DEPTH {
             return self.leaf_value();
         }
@@ -237,14 +237,14 @@ impl Generator {
                 for _ in 0..len {
                     items.push(self.value(depth + 1));
                 }
-                LumaValue::Sequence(LumaSequence { items, span: None })
+                LymaValue::Sequence(LymaSequence { items, span: None })
             }
             _ => {
                 let len = self.next_usize(Self::MAX_ITEMS).saturating_add(1);
                 let mut entries = Vec::with_capacity(len);
                 for index in 0..len {
-                    entries.push(LumaMappingEntry {
-                        key: LumaKey::String(format!(
+                    entries.push(LymaMappingEntry {
+                        key: LymaKey::String(format!(
                             "key-{depth}-{index}-{}",
                             self.next_usize(100)
                         )),
@@ -252,7 +252,7 @@ impl Generator {
                         span: None,
                     });
                 }
-                LumaValue::Mapping(LumaMapping {
+                LymaValue::Mapping(LymaMapping {
                     entries,
                     duplicate_keys: Vec::new(),
                     span: None,
@@ -261,13 +261,13 @@ impl Generator {
         }
     }
 
-    fn leaf_value(&mut self) -> LumaValue {
+    fn leaf_value(&mut self) -> LymaValue {
         match self.next_usize(5) {
-            0 => LumaValue::Null(LumaNull),
-            1 => LumaValue::Boolean(self.next_bool()),
-            2 => LumaValue::Number(LumaNumber::Integer(self.next_usize(2_048) as i64 - 1_024)),
-            3 => LumaValue::Number(LumaNumber::Float((self.next_usize(10_000) as f64) / 10.0)),
-            _ => LumaValue::String(self.string()),
+            0 => LymaValue::Null(LymaNull),
+            1 => LymaValue::Boolean(self.next_bool()),
+            2 => LymaValue::Number(LymaNumber::Integer(self.next_usize(2_048) as i64 - 1_024)),
+            3 => LymaValue::Number(LymaNumber::Float((self.next_usize(10_000) as f64) / 10.0)),
+            _ => LymaValue::String(self.string()),
         }
     }
 }

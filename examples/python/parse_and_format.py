@@ -3,17 +3,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import luma as luma
+import lyma as lyma
 
 
-EXAMPLE_FILE = Path(__file__).with_name("example.luma")
+EXAMPLE_FILE = Path(__file__).with_name("example.lyma")
 
 
 def run() -> None:
     source = EXAMPLE_FILE.read_text(encoding="utf-8")
-    parsed = luma.parse_str(1, EXAMPLE_FILE.name, source)
+    parsed = lyma.parse_str(1, EXAMPLE_FILE.name, source)
 
-    print("Luma version:", luma.version())
+    print("Lyma version:", lyma.version())
     print("Opened:", EXAMPLE_FILE.name)
     print("Documents:", parsed["document_count"])
     print("Diagnostics:", json.dumps(parsed["diagnostics"], indent=2))
@@ -21,7 +21,7 @@ def run() -> None:
     if parsed["syntax_index"]:
         print("First syntax node:", json.dumps(parsed["syntax_index"][0], indent=2))
 
-    formatted = luma.format_str(1, EXAMPLE_FILE.name, source)
+    formatted = lyma.format_str(1, EXAMPLE_FILE.name, source)
     print("Formatter changed input:", formatted["changed"])
     print("Formatted preview:")
     print("\n".join(formatted["text"].splitlines()[:20]))

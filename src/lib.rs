@@ -1,4 +1,4 @@
-//! Public facade for the Luma workspace.
+//! Public facade for the Lyma workspace.
 //!
 //! Default features are parser-only and do **not** pull in a Lua runtime.
 //! Enable `omnilua` for the ergonomic evaluation facade plus the OmniLua backend,
@@ -7,13 +7,13 @@
 //! # Parse without Lua
 //!
 //! ```rust
-//! use luma::{LumaDocument, LumaValue, Parser};
-//! use luma::parser::FileId;
-//! use luma::syntax::SyntaxKind;
+//! use lyma::{LymaDocument, LymaValue, Parser};
+//! use lyma::parser::FileId;
+//! use lyma::syntax::SyntaxKind;
 //!
-//! let parsed = Parser::new().parse_str(FileId(1), "example.luma", "name: Example\n");
-//! let _document: &LumaDocument = &parsed.file.documents[0];
-//! let _value_type: Option<LumaValue> = None;
+//! let parsed = Parser::new().parse_str(FileId(1), "example.lyma", "name: Example\n");
+//! let _document: &LymaDocument = &parsed.file.documents[0];
+//! let _value_type: Option<LymaValue> = None;
 //! assert!(parsed.diagnostics.is_empty());
 //!
 //! let index = parsed.syntax_index();
@@ -30,14 +30,14 @@
 //! Parser and tooling APIs expose lexical/syntactic editor primitives in
 //! source-relative byte offsets/ranges. Higher-level LSP semantics such as
 //! semantic tokens, references, rename, and workspace indexing remain
-//! downstream responsibilities for language servers such as `lumals`.
+//! downstream responsibilities for language servers such as `lymals`.
 //!
 //! # Serialize with serde
 //!
 //! ```rust
 //! # #[cfg(feature = "serde")]
 //! # {
-//! use luma::serde::to_value;
+//! use lyma::serde::to_value;
 //!
 //! let _ = to_value("example");
 //! # }
@@ -50,26 +50,26 @@
 //!
 //! ```toml
 //! [dependencies]
-//! luma = { version = "0.1", features = ["omnilua"] }
+//! lyma = { version = "0.1", features = ["omnilua"] }
 //! ```
 //!
 //! Existing compatibility also remains available via:
 //!
 //! ```toml
 //! [dependencies]
-//! luma = { version = "0.1", features = ["eval", "engine-omnilua"] }
+//! lyma = { version = "0.1", features = ["eval", "engine-omnilua"] }
 //! ```
 //!
 //! ```no_run
 //! # #[cfg(feature = "omnilua")]
 //! # {
-//! use luma::{Loader, OmniLuaEngine, Parser};
-//! use luma::parser::FileId;
+//! use lyma::{Loader, OmniLuaEngine, Parser};
+//! use lyma::parser::FileId;
 //!
-//! let parsed = Parser::new().parse_str(FileId(1), "example.luma", "answer: =40 + 2\n");
+//! let parsed = Parser::new().parse_str(FileId(1), "example.lyma", "answer: =40 + 2\n");
 //! let engine = OmniLuaEngine::default();
 //! let documents = Loader::new(&engine)
-//!     .load_file(&parsed.file, "example.luma", None)
+//!     .load_file(&parsed.file, "example.lyma", None)
 //!     .unwrap();
 //!
 //! assert_eq!(documents.len(), 1);
@@ -85,29 +85,29 @@ pub mod tooling;
 mod python;
 
 #[cfg(feature = "syntax")]
-pub use luma_syntax as syntax;
+pub use lyma_syntax as syntax;
 
 #[cfg(feature = "parser")]
-pub use luma_parser as parser;
+pub use lyma_parser as parser;
 
 #[cfg(feature = "serde")]
-pub use luma_serde as serde;
+pub use lyma_serde as serde;
 
-#[cfg(feature = "lumba")]
-pub use luma_lumba as lumba;
+#[cfg(feature = "lyba")]
+pub use lyma_lyba as lyba;
 
 #[cfg(feature = "runtime")]
-pub use luma_runtime as runtime;
+pub use lyma_runtime as runtime;
 
 #[cfg(feature = "eval")]
-pub use luma_eval as eval;
+pub use lyma_eval as eval;
 
 #[cfg(feature = "engine-omnilua")]
-pub use luma_engine_omnilua as engine_omnilua;
+pub use lyma_engine_omnilua as engine_omnilua;
 
 #[cfg(feature = "syntax")]
-pub use luma_syntax::{
-    Diagnostic, Document as LumaDocument, LumaNull, LumaValue, SyntaxIndex, SyntaxKind,
+pub use lyma_syntax::{
+    Diagnostic, Document as LymaDocument, LymaNull, LymaValue, SyntaxIndex, SyntaxKind,
     SyntaxNodeId, SyntaxNodeInfo,
 };
 
@@ -128,17 +128,17 @@ impl Parser {
     #[must_use]
     pub fn parse_str(
         self,
-        file_id: luma_parser::FileId,
+        file_id: lyma_parser::FileId,
         name: &str,
         text: &str,
-    ) -> luma_parser::Parsed {
-        luma_parser::parse_str(file_id, name, text)
+    ) -> lyma_parser::Parsed {
+        lyma_parser::parse_str(file_id, name, text)
     }
 
     /// Parses already-decoded source text without executing Lua.
     #[must_use]
-    pub fn parse_source(self, source: luma_parser::SourceText) -> luma_parser::Parsed {
-        luma_parser::parse_source(source)
+    pub fn parse_source(self, source: lyma_parser::SourceText) -> lyma_parser::Parsed {
+        lyma_parser::parse_source(source)
     }
 
     /// Creates a stateful incremental parse session for one source buffer.
@@ -146,33 +146,33 @@ impl Parser {
     /// Today this is a validated full-reparse shell that reports incremental
     /// metadata without promising subtree reuse yet.
     #[must_use]
-    pub fn session(self, file_id: luma_parser::FileId, name: &str) -> luma_parser::ParseSession {
-        luma_parser::ParseSession::new(file_id, name)
+    pub fn session(self, file_id: lyma_parser::FileId, name: &str) -> lyma_parser::ParseSession {
+        lyma_parser::ParseSession::new(file_id, name)
     }
 }
 
 #[cfg(feature = "eval")]
-pub use luma_eval::EvaluationOptions as LoadOptions;
+pub use lyma_eval::EvaluationOptions as LoadOptions;
 #[cfg(feature = "eval")]
-pub use luma_eval::EvaluationProfile as Profile;
+pub use lyma_eval::EvaluationProfile as Profile;
 #[cfg(feature = "eval")]
-pub type Resolver = dyn luma_eval::ResourceResolver;
+pub type Resolver = dyn lyma_eval::ResourceResolver;
 #[cfg(feature = "eval")]
-pub type ModuleRegistry<E> = dyn luma_eval::ModuleRegistry<E>;
+pub type ModuleRegistry<E> = dyn lyma_eval::ModuleRegistry<E>;
 #[cfg(feature = "eval")]
-pub type TagResolver = dyn luma_eval::TagResolver;
+pub type TagResolver = dyn lyma_eval::TagResolver;
 
 #[cfg(feature = "eval")]
-/// Ergonomic loader facade over `luma_eval::AstEvaluator`.
-pub struct Loader<'a, E: luma_runtime::LuaRuntimeEngine> {
+/// Ergonomic loader facade over `lyma_eval::AstEvaluator`.
+pub struct Loader<'a, E: lyma_runtime::LuaRuntimeEngine> {
     engine: &'a E,
-    options: luma_eval::EvaluationOptions<'a, E>,
+    options: lyma_eval::EvaluationOptions<'a, E>,
 }
 
 #[cfg(feature = "eval")]
-impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
-    fn options(&self) -> luma_eval::EvaluationOptions<'a, E> {
-        luma_eval::EvaluationOptions {
+impl<'a, E: lyma_runtime::LuaRuntimeEngine> Loader<'a, E> {
+    fn options(&self) -> lyma_eval::EvaluationOptions<'a, E> {
+        lyma_eval::EvaluationOptions {
             profile: self.options.profile,
             resolver: self.options.resolver,
             module_registry: self.options.module_registry,
@@ -187,27 +187,27 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
     pub fn new(engine: &'a E) -> Self {
         Self {
             engine,
-            options: luma_eval::EvaluationOptions::default(),
+            options: lyma_eval::EvaluationOptions::default(),
         }
     }
 
     /// Replaces the full option bundle.
     #[must_use]
-    pub fn with_options(mut self, options: luma_eval::EvaluationOptions<'a, E>) -> Self {
+    pub fn with_options(mut self, options: lyma_eval::EvaluationOptions<'a, E>) -> Self {
         self.options = options;
         self
     }
 
     /// Overrides the active evaluation profile policy.
     #[must_use]
-    pub fn profile(mut self, profile: &'a dyn luma_eval::ProfilePolicy) -> Self {
+    pub fn profile(mut self, profile: &'a dyn lyma_eval::ProfilePolicy) -> Self {
         self.options.profile = profile;
         self
     }
 
     /// Installs a resource resolver for imports/includes/schema loads.
     #[must_use]
-    pub fn resolver(mut self, resolver: &'a dyn luma_eval::ResourceResolver) -> Self {
+    pub fn resolver(mut self, resolver: &'a dyn lyma_eval::ResourceResolver) -> Self {
         self.options.resolver = Some(resolver);
         self
     }
@@ -216,7 +216,7 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
     #[must_use]
     pub fn module_registry(
         mut self,
-        module_registry: &'a dyn luma_eval::ModuleRegistry<E>,
+        module_registry: &'a dyn lyma_eval::ModuleRegistry<E>,
     ) -> Self {
         self.options.module_registry = Some(module_registry);
         self
@@ -224,7 +224,7 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
 
     /// Installs a tag resolver.
     #[must_use]
-    pub fn tag_resolver(mut self, tag_resolver: &'a dyn luma_eval::TagResolver) -> Self {
+    pub fn tag_resolver(mut self, tag_resolver: &'a dyn lyma_eval::TagResolver) -> Self {
         self.options.tag_resolver = Some(tag_resolver);
         self
     }
@@ -233,7 +233,7 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
     #[must_use]
     pub fn schema_validator(
         mut self,
-        schema_validator: &'a dyn luma_eval::SchemaValidator,
+        schema_validator: &'a dyn lyma_eval::SchemaValidator,
     ) -> Self {
         self.options.schema_validator = Some(schema_validator);
         self
@@ -241,7 +241,7 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
 
     /// Overrides the unknown-tag policy.
     #[must_use]
-    pub fn unknown_tag_policy(mut self, policy: luma_eval::UnknownTagPolicy) -> Self {
+    pub fn unknown_tag_policy(mut self, policy: lyma_eval::UnknownTagPolicy) -> Self {
         self.options.unknown_tag_policy = policy;
         self
     }
@@ -253,11 +253,11 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
     /// Returns an error when evaluation or any enabled host capability fails.
     pub fn load_file(
         &self,
-        file: &luma_syntax::LumaFile,
+        file: &lyma_syntax::LymaFile,
         source_name: &str,
-        locator: Option<luma_eval::ResourceLocator>,
-    ) -> Result<Vec<luma_syntax::LumaValue>, luma_eval::EvaluationError> {
-        luma_eval::AstEvaluator {
+        locator: Option<lyma_eval::ResourceLocator>,
+    ) -> Result<Vec<lyma_syntax::LymaValue>, lyma_eval::EvaluationError> {
+        lyma_eval::AstEvaluator {
             engine: self.engine,
             options: self.options(),
         }
@@ -271,11 +271,11 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
     /// Returns an error when evaluation or any enabled host capability fails.
     pub fn load_file_with_metadata(
         &self,
-        file: &luma_syntax::LumaFile,
+        file: &lyma_syntax::LymaFile,
         source_name: &str,
-        locator: Option<luma_eval::ResourceLocator>,
-    ) -> Result<Vec<luma_eval::EvaluatedDocument>, luma_eval::EvaluationError> {
-        luma_eval::AstEvaluator {
+        locator: Option<lyma_eval::ResourceLocator>,
+    ) -> Result<Vec<lyma_eval::EvaluatedDocument>, lyma_eval::EvaluationError> {
+        lyma_eval::AstEvaluator {
             engine: self.engine,
             options: self.options(),
         }
@@ -284,7 +284,7 @@ impl<'a, E: luma_runtime::LuaRuntimeEngine> Loader<'a, E> {
 }
 
 #[cfg(feature = "omnilua")]
-pub use luma_engine_omnilua::OmniLuaEngine;
+pub use lyma_engine_omnilua::OmniLuaEngine;
 
 /// Returns the crate version at compile time.
 #[must_use]

@@ -1,5 +1,5 @@
 [package]
-name = "luma-fuzz"
+name = "lyma-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -9,10 +9,10 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-luma = { path = "..", features = ["parser", "syntax"] }
-luma-lumba = { path = "../crates/luma-lumba" }
-luma-parser = { path = "../crates/luma-parser" }
-luma-syntax = { path = "../crates/luma-syntax" }
+lyma = { path = "..", features = ["parser", "syntax"] }
+lyma-lyba = { path = "../crates/lyma-lyba" }
+lyma-parser = { path = "../crates/lyma-parser" }
+lyma-syntax = { path = "../crates/lyma-syntax" }
 
 [[bin]]
 name = "parse"
@@ -29,15 +29,15 @@ doc = false
 bench = false
 
 [[bin]]
-name = "lumba_read"
-path = "fuzz_targets/lumba_read.rs"
+name = "lyba_read"
+path = "fuzz_targets/lyba_read.rs"
 test = false
 doc = false
 bench = false
 
 [[bin]]
-name = "lumba_value"
-path = "fuzz_targets/lumba_value.rs"
+name = "lyba_value"
+path = "fuzz_targets/lyba_value.rs"
 test = false
 doc = false
 bench = false

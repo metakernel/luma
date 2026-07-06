@@ -2,7 +2,7 @@
 
 ## Defaults
 
-Luma is safe-by-default at both layers:
+Lyma is safe-by-default at both layers:
 
 - parser APIs are engine-agnostic and never execute Lua
 - evaluation capabilities are opt-in
@@ -16,7 +16,7 @@ Luma is safe-by-default at both layers:
 - no schema validator
 - unknown tags rejected for schema-validated documents
 
-`luma::lumba::Limits::default()` configures the public LUMBA policy preset:
+`lyma::lyba::Limits::default()` configures the public LYBA policy preset:
 
 - trust policy: public
 - max input bytes: 8 MiB
@@ -55,9 +55,9 @@ Restricted evaluation:
 
 The evaluator also rejects obviously unsafe global or module names such as `_G`, `_ENV`, `io`, `os`, `debug`, `require`, `load`, metatable/raw APIs, `coroutine`, `ffi`, `jit`, and known nondeterministic calls like `math.random`.
 
-## LUMBA safety model
+## LYBA safety model
 
-LUMBA is a binary container, not an execution format:
+LYBA is a binary container, not an execution format:
 
 - readers/verifiers never execute Lua
 - readers/verifiers never compile stored chunks

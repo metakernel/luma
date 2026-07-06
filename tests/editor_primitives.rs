@@ -1,17 +1,17 @@
-use luma::parser::{
+use lyma::parser::{
     FileId, FormatRangeFallback, FormatRangeOptions, IncrementalParseInput, TextChange, TokenKind,
     format_range_edits, lex_str,
 };
-use luma::tooling::{
+use lyma::tooling::{
     TextRange, apply_text_edits, format_document_range_text_edits, format_document_text_edit,
     format_document_text_edits,
 };
-use luma::{Parser, SyntaxKind};
+use lyma::{Parser, SyntaxKind};
 
 #[test]
 fn editor_parser_syntax_index_exposes_exact_spans_and_handles() {
     let source = "service:\n  name:'api'\n  enabled:true\n";
-    let parsed = Parser::new().parse_str(FileId(7), "service.luma", source);
+    let parsed = Parser::new().parse_str(FileId(7), "service.lyma", source);
 
     assert!(parsed.diagnostics.is_empty(), "{:#?}", parsed.diagnostics);
 
@@ -79,7 +79,7 @@ fn editor_parser_syntax_index_exposes_exact_spans_and_handles() {
 #[test]
 fn editor_parse_session_updates_public_handles_after_text_change() {
     let source = "service:\n  name:'api'\n  enabled:true\n";
-    let mut session = Parser::new().session(FileId(9), "service.luma");
+    let mut session = Parser::new().session(FileId(9), "service.lyma");
     let _initial = session.parse(source);
     let replace_range = TextRange::new(
         source.find("enabled:true").unwrap(),
@@ -95,7 +95,7 @@ fn editor_parse_session_updates_public_handles_after_text_change() {
 
     let expected_source = apply_text_edits(
         source,
-        &[luma::tooling::TextEdit {
+        &[lyma::tooling::TextEdit {
             range: replace_range,
             text: String::from("enabled: false"),
         }],
@@ -127,7 +127,7 @@ fn editor_parse_session_updates_public_handles_after_text_change() {
 #[test]
 fn editor_lexical_primitives_expose_token_trivia_and_line_indents() {
     let source = "root:\n  child:  next  -- note\n";
-    let lexed = lex_str(FileId(11), "service.luma", source);
+    let lexed = lex_str(FileId(11), "service.lyma", source);
 
     assert!(lexed.diagnostics.is_empty(), "{:#?}", lexed.diagnostics);
 
@@ -179,7 +179,7 @@ fn editor_lexical_primitives_expose_token_trivia_and_line_indents() {
 fn editor_formatting_helpers_apply_back_to_canonical_output() {
     let source = "service:\r\n  name:'api'\r\n  enabled:true\r\n";
 
-    let (formatted, whole_edit) = format_document_text_edit("service.luma", source);
+    let (formatted, whole_edit) = format_document_text_edit("service.lyma", source);
     assert!(formatted.parsed.diagnostics.is_empty());
     assert_eq!(whole_edit.range, TextRange::new(0, source.len()));
     assert_eq!(
@@ -187,7 +187,7 @@ fn editor_formatting_helpers_apply_back_to_canonical_output() {
         Some(formatted.formatted.text.clone())
     );
 
-    let (_, minimal_edits) = format_document_text_edits("service.luma", source);
+    let (_, minimal_edits) = format_document_text_edits("service.lyma", source);
     assert_eq!(
         apply_text_edits(source, &minimal_edits),
         Some(formatted.formatted.text.clone())
@@ -200,11 +200,11 @@ fn editor_formatting_helpers_apply_back_to_canonical_output() {
         ..FormatRangeOptions::default()
     };
     let (_, tooling_range_edits) =
-        format_document_range_text_edits("service.luma", normalized_source, full_range, options)
+        format_document_range_text_edits("service.lyma", normalized_source, full_range, options)
             .unwrap();
     let (_, parser_range_edits) = format_range_edits(
         FileId(1),
-        "service.luma",
+        "service.lyma",
         normalized_source,
         full_range,
         options,

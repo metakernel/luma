@@ -2,34 +2,34 @@
 
 ## Facade crate
 
-`luma` re-exports workspace crates behind features:
+`lyma` re-exports workspace crates behind features:
 
-- `luma::syntax`
-- `luma::parser`
-- `luma::runtime`
-- `luma::eval`
-- `luma::serde`
-- `luma::lumba`
-- `luma::engine_omnilua`
-- `luma::tooling`
+- `lyma::syntax`
+- `lyma::parser`
+- `lyma::runtime`
+- `lyma::eval`
+- `lyma::serde`
+- `lyma::lyba`
+- `lyma::engine_omnilua`
+- `lyma::tooling`
 
-`luma::version()` returns the crate version.
+`lyma::version()` returns the crate version.
 
 Feature highlights:
 
 - default features: `parser`
-- `serde = ["syntax", "dep:luma-serde"]` enables the facade Serde bridge as `luma::serde`
-- `lumba = ["syntax", "dep:luma-lumba"]` enables the inert binary companion API as `luma::lumba`
+- `serde = ["syntax", "dep:lyma-serde"]` enables the facade Serde bridge as `lyma::serde`
+- `lyba = ["syntax", "dep:lyma-lyba"]` enables the inert binary companion API as `lyma::lyba`
 - `eval` and backend features remain opt-in
 
 ## Syntax layer
 
-Use `luma::syntax` for stable data types:
+Use `lyma::syntax` for stable data types:
 
-- AST: `LumaFile`, `Document`, `DocumentItem`, `LumaNode`, directives, blocks
+- AST: `LymaFile`, `Document`, `DocumentItem`, `LymaNode`, directives, blocks
 - syntax index: `SyntaxIndex`, `SyntaxKind`, `SyntaxNodeId`, `SyntaxNodeInfo`
-- values: `LumaValue`, `LumaMapping`, `LumaSequence`, `LumaTaggedValue`
-- source model: `FileId`, `LumaSource`, `Span`
+- values: `LymaValue`, `LymaMapping`, `LymaSequence`, `LymaTaggedValue`
+- source model: `FileId`, `LymaSource`, `Span`
 - diagnostics: `Diagnostic`, `DiagnosticCode`, `Severity`
 - serializer: `serialize_value`, `serialize_value_with_options`
 
@@ -39,7 +39,7 @@ or reparses.
 
 ## Parser layer
 
-Use `luma::parser` when you want engine-neutral parsing, lexing, decoding, or formatting.
+Use `lyma::parser` when you want engine-neutral parsing, lexing, decoding, or formatting.
 
 Primary entry points:
 
@@ -63,7 +63,7 @@ Lexing also exposes stable lexical editor primitives:
 These are lexical/syntactic primitives only. They describe source layout for
 formatting, offset mapping, comment preservation, or lightweight token-aware UX;
 semantic token classification still belongs in downstream tools such as
-`lumals`.
+`lymals`.
 
 Incremental parsing is currently an **API shell**:
 
@@ -78,11 +78,11 @@ Important guarantee: parser APIs are **engine-agnostic** and do not execute Lua.
 Example with public facade APIs only:
 
 ```rust
-use luma::Parser;
-use luma::parser::FileId;
-use luma::syntax::SyntaxKind;
+use lyma::Parser;
+use lyma::parser::FileId;
+use lyma::syntax::SyntaxKind;
 
-let parsed = Parser::new().parse_str(FileId(1), "example.luma", "root:\n  child: 42\n");
+let parsed = Parser::new().parse_str(FileId(1), "example.lyma", "root:\n  child: 42\n");
 let index = parsed.syntax_index();
 
 let child_offset = parsed.source.as_str().find("child").unwrap();
@@ -98,15 +98,15 @@ editor byte offset to the smallest indexed syntax node, then inspect that node's
 kind/span and slice the source text as needed. Higher-level LSP behavior such as
 hover rendering, semantic token classification, references, rename, and
 workspace-wide symbol/index queries belongs in downstream consumers such as
-`lumals`.
+`lymals`.
 
 Lexical example with public token/trivia APIs only:
 
 ```rust
-use luma::parser::{FileId, TokenKind, lex_str};
+use lyma::parser::{FileId, TokenKind, lex_str};
 
 let source = "root:\n  child:  next  -- note\n";
-let lexed = lex_str(FileId(1), "example.luma", source);
+let lexed = lex_str(FileId(1), "example.lyma", source);
 
 let next = lexed.tokens.iter().find(|token| token.lexeme == "next").unwrap();
 let comment = lexed.tokens.iter().find(|token| token.kind == TokenKind::Comment).unwrap();
@@ -121,7 +121,7 @@ assert_eq!(&source[lexed.indents[1].span.byte_range()], "  ");
 
 ## Tooling helpers
 
-`luma::tooling` exposes editor-oriented helpers:
+`lyma::tooling` exposes editor-oriented helpers:
 
 - `format_document_edit`
 - `format_document_text_edit`
@@ -148,28 +148,28 @@ Range-formatting is conservative because canonical formatting is still whole-fil
 Example:
 
 ```rust
-use luma::tooling::{
+use lyma::tooling::{
     FormatRangeOptions, TextRange, format_document_range_text_edits,
     format_document_text_edit,
 };
 
 let source = "service:\n  name:'api'\n  enabled:true\n";
-let (_formatting, whole_edit) = format_document_text_edit("service.luma", source);
+let (_formatting, whole_edit) = format_document_text_edit("service.lyma", source);
 assert_eq!(whole_edit.range, TextRange::new(0, source.len()));
 
 let enabled_start = source.find("enabled").unwrap();
 let (_formatting, range_edits) = format_document_range_text_edits(
-    "service.luma",
+    "service.lyma",
     source,
     TextRange::new(enabled_start, source.len()),
     FormatRangeOptions::default(),
 )?;
 
 assert!(!range_edits.is_empty());
-# Ok::<(), luma::parser::FormatRangeError>(())
+# Ok::<(), lyma::parser::FormatRangeError>(())
 ```
 
-Downstream `lumals` should build semantic formatting UX, code actions, rename
+Downstream `lymals` should build semantic formatting UX, code actions, rename
 previews, and other LSP semantics on top of these edit primitives rather than
 expecting the core crate to own those policies.
 
@@ -179,13 +179,13 @@ Use `ParseSession` plus `IncrementalParseInput`/`TextChange` when an editor want
 to feed document updates through a stable incremental API:
 
 ```rust
-use luma::parser::{
+use lyma::parser::{
     FileId, IncrementalParseInput, IncrementalParseStrategy, ParseSession,
     TextChange,
 };
-use luma::tooling::TextRange;
+use lyma::tooling::TextRange;
 
-let mut session = ParseSession::new(FileId(1), "service.luma");
+let mut session = ParseSession::new(FileId(1), "service.lyma");
 let first = session.parse("enabled:true\n");
 assert!(first.parsed().diagnostics.is_empty());
 
@@ -197,7 +197,7 @@ let updated = session.apply(IncrementalParseInput::new(vec![TextChange::replace(
 assert_eq!(updated.strategy, IncrementalParseStrategy::FullReparse);
 assert!(!updated.reused);
 assert_eq!(updated.document.source(), "enabled: false\n");
-# Ok::<(), luma::parser::IncrementalParseError>(())
+# Ok::<(), lyma::parser::IncrementalParseError>(())
 ```
 
 Today this remains an API shell around validated full reparses. Downstream tools
@@ -206,7 +206,7 @@ token or subtree reuse behind the same API.
 
 ## Evaluation layer
 
-Use `luma::eval::AstEvaluator` to evaluate parsed documents against any backend implementing `LuaRuntimeEngine`.
+Use `lyma::eval::AstEvaluator` to evaluate parsed documents against any backend implementing `LuaRuntimeEngine`.
 
 Primary types:
 
@@ -219,7 +219,7 @@ Primary types:
 
 Main methods:
 
-- `evaluate_file(&LumaFile, source_name, locator) -> Result<Vec<LumaValue>, EvaluationError>`
+- `evaluate_file(&LymaFile, source_name, locator) -> Result<Vec<LymaValue>, EvaluationError>`
 - `evaluate_file_with_metadata(...) -> Result<Vec<EvaluatedDocument>, EvaluationError>`
 
 ## Profiles
@@ -235,34 +235,34 @@ Behavior:
 - restricted: deterministic, sandboxed, runtime-only outputs denied
 - permissive: caller-supplied limits, runtime-only outputs allowed
 
-Document metadata can also request Luma profiles such as `data`, `safe`, and `trusted`. The evaluator maps those declarations against the host profile policy and will reject `trusted` unless the active host profile is also named `trusted`.
+Document metadata can also request Lyma profiles such as `data`, `safe`, and `trusted`. The evaluator maps those declarations against the host profile policy and will reject `trusted` unless the active host profile is also named `trusted`.
 
-## LUMBA binary layer
+## LYBA binary layer
 
 Enable the facade feature explicitly:
 
 ```toml
 [dependencies]
-luma = { version = "0.1", features = ["lumba"] }
+lyma = { version = "0.1", features = ["lyba"] }
 ```
 
-Primary types re-exported from `luma::lumba`:
+Primary types re-exported from `lyma::lyba`:
 
-- `LumbaFile`, `Document`
+- `LybaFile`, `Document`
 - `Reader`, `ReadOptions`
 - `Writer`, `WriteOptions`
 - `Value`
 - `Limits`
 - `WriterMode`, `CanonicalMode`, `TextReconstructionMode`
-- verifier API via `luma::lumba::verify::Verifier`
-- policy enums via `luma::lumba::policy::{TrustPolicy, ReservedFlagPolicy, ExtensionNamePolicy}`
+- verifier API via `lyma::lyba::verify::Verifier`
+- policy enums via `lyma::lyba::policy::{TrustPolicy, ReservedFlagPolicy, ExtensionNamePolicy}`
 
 Minimal round-trip example:
 
 ```rust
-use luma::lumba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
+use lyma::lyba::{Document, Limits, ReadOptions, Reader, Value, WriteOptions, Writer};
 
-let file = luma::lumba::LumbaFile::new().with_document(
+let file = lyma::lyba::LybaFile::new().with_document(
     Document::new().with_root_value(Value::String(String::from("hello"))),
 );
 
@@ -270,20 +270,20 @@ let bytes = Writer::new(WriteOptions::new().with_limits(Limits::public())).write
 let decoded = Reader::new(ReadOptions::new().with_limits(Limits::public())).read(&bytes)?;
 
 assert_eq!(decoded.documents.len(), 1);
-# Ok::<(), luma::lumba::LumbaError>(())
+# Ok::<(), lyma::lyba::LybaError>(())
 ```
 
-Portable-value helpers are also available when you already have `luma::syntax::LumaValue` data:
+Portable-value helpers are also available when you already have `lyma::syntax::LymaValue` data:
 
 ```rust
-use luma::LumaNull;
-use luma::LumaValue;
+use lyma::LymaNull;
+use lyma::LymaValue;
 
-let bytes = luma::lumba::try_to_lumba_value_image(&[LumaValue::Null(LumaNull)])?;
-let values = luma::lumba::try_from_lumba_value_image(&bytes)?;
+let bytes = lyma::lyba::try_to_lyba_value_image(&[LymaValue::Null(LymaNull)])?;
+let values = lyma::lyba::try_from_lyba_value_image(&bytes)?;
 
-assert_eq!(values, vec![LumaValue::Null(LumaNull)]);
-# Ok::<(), luma::lumba::LumbaError>(())
+assert_eq!(values, vec![LymaValue::Null(LymaNull)]);
+# Ok::<(), lyma::lyba::LybaError>(())
 ```
 
 Security/defaults:
@@ -336,7 +336,7 @@ Writer modes exposed by the API:
 
 ## Runtime/backend APIs
 
-`luma::runtime` defines backend-neutral contracts:
+`lyma::runtime` defines backend-neutral contracts:
 
 - `Engine`
 - `LuaRuntimeEngine`
@@ -351,15 +351,15 @@ Writer modes exposed by the API:
 
 Use `EvaluationPlan<E>` for direct expression/chunk execution when you need raw engine access outside AST evaluation.
 
-## Serde adapter policy (`luma-serde`)
+## Serde adapter policy (`lyma-serde`)
 
-Use `luma_serde::{to_value, to_string, to_string_with_options, from_value}` to bridge Rust `serde` data with `luma::syntax::LumaValue`.
+Use `lyma_serde::{to_value, to_string, to_string_with_options, from_value}` to bridge Rust `serde` data with `lyma::syntax::LymaValue`.
 
-Through the facade crate, enable `features = ["serde"]` and call the same helpers from `luma::serde`:
+Through the facade crate, enable `features = ["serde"]` and call the same helpers from `lyma::serde`:
 
 ```toml
 [dependencies]
-luma = { version = "0.1", features = ["serde"] }
+lyma = { version = "0.1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 ```
 
@@ -372,26 +372,26 @@ struct Example<'a> {
     enabled: bool,
 }
 
-let text = luma::serde::to_string(&Example {
+let text = lyma::serde::to_string(&Example {
     name: "demo",
     enabled: true,
 })?;
 
 assert_eq!(text, "enabled: true\nname: demo\n");
-# Ok::<(), luma::serde::Error>(())
+# Ok::<(), lyma::serde::Error>(())
 ```
 
-`to_string` uses `luma_syntax` serialization rules, so output is canonical Luma text rather than preserving Rust field order quirks from custom emitters.
+`to_string` uses `lyma_syntax` serialization rules, so output is canonical Lyma text rather than preserving Rust field order quirks from custom emitters.
 
 ### Serialization support
 
 `to_value` supports these Serde shapes:
 
-- scalars: `bool`, strings, `char`, finite floats, and integers within Luma's `i64` range
-- `Option::None`, unit, and unit structs as Luma `null`
+- scalars: `bool`, strings, `char`, finite floats, and integers within Lyma's `i64` range
+- `Option::None`, unit, and unit structs as Lyma `null`
 - `Option::Some` and newtype structs as their inner value
-- sequences, tuples, and tuple structs as Luma sequences
-- maps and structs as Luma mappings
+- sequences, tuples, and tuple structs as Lyma sequences
+- maps and structs as Lyma mappings
 - enums in externally tagged form:
   - unit variant -> string variant name
   - newtype variant -> `{ variant: payload }`
@@ -402,13 +402,13 @@ Unsupported or ambiguous shapes fail during serialization:
 
 - bytes / `serde_bytes` are rejected (`unsupported: byte slices`)
 - non-finite floats (`NaN`, `+/-inf`) are rejected (`unsupported: non-finite floating-point value`)
-- `u64`, `u128`, or `i128` values outside signed 64-bit range are rejected (`unsupported: integer outside Luma i64 range`)
-- map keys for `to_value` must serialize to scalar Luma keys only: string, number, or boolean
+- `u64`, `u128`, or `i128` values outside signed 64-bit range are rejected (`unsupported: integer outside Lyma i64 range`)
+- map keys for `to_value` must serialize to scalar Lyma keys only: string, number, or boolean
 - map keys that serialize to `null`, sequences, mappings, bytes, or other non-scalars are rejected (`unsupported: non-scalar mapping key`)
 
 `to_string` and `to_string_with_options` are stricter than `to_value`:
 
-- they first serialize to `LumaValue`, then emit canonical Luma text
+- they first serialize to `LymaValue`, then emit canonical Lyma text
 - all mapping keys in the resulting value must be strings
 - numeric and boolean keys are allowed by `to_value` but rejected by text serialization with an error directing callers to use `to_value`
 
@@ -416,7 +416,7 @@ Unsupported or ambiguous shapes fail during serialization:
 
 `from_value` supports:
 
-- matching scalar Luma null/bool/number/string values
+- matching scalar Lyma null/bool/number/string values
 - sequences for sequences, tuples, and tuple structs
 - mappings for maps and structs
 - `null` for unit, unit structs, and `Option::None`
@@ -424,13 +424,13 @@ Unsupported or ambiguous shapes fail during serialization:
 - enums from either:
   - a string variant name
   - a single-entry mapping whose key is the string variant name
-  - a tagged Luma value whose tag name is treated as the variant name
+  - a tagged Lyma value whose tag name is treated as the variant name
 
-Tagged Luma values are otherwise transparent: when the Rust target is not an enum, `from_value` ignores the tag wrapper and deserializes the tagged payload directly.
+Tagged Lyma values are otherwise transparent: when the Rust target is not an enum, `from_value` ignores the tag wrapper and deserializes the tagged payload directly.
 
 Unsupported or mismatched deserialization fails with explicit shape errors:
 
 - bytes / byte buffers are rejected as unsupported
 - `char` requires a one-character string
 - enum maps must have exactly one entry and that entry's key must be a string variant name
-- runtime-only Luma values (`function`, `userdata`, `host object`) and runtime-only host mapping keys cannot be deserialized and report explicit runtime-only errors
+- runtime-only Lyma values (`function`, `userdata`, `host object`) and runtime-only host mapping keys cannot be deserialized and report explicit runtime-only errors

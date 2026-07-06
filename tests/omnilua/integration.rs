@@ -1,12 +1,12 @@
 //! Integration tests for the `OmniLua` backend.
 
-use luma_engine_omnilua::OmniLuaEngine;
-use luma_runtime::{
+use lyma_engine_omnilua::OmniLuaEngine;
+use lyma_runtime::{
     ConversionPolicy, LuaRuntimeEngine, LuaSourceText, RuntimeEnvironment,
     RuntimeEnvironmentFactory, RuntimeLimits, RuntimeModuleFactory, RuntimeValueCodec,
 };
-use luma_syntax::{
-    FileId, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaValue, source::Span,
+use lyma_syntax::{
+    FileId, LymaKey, LymaMapping, LymaMappingEntry, LymaNull, LymaNumber, LymaValue, source::Span,
 };
 
 fn eval_expr(
@@ -15,11 +15,11 @@ fn eval_expr(
     source: &str,
     span: Span,
     limits: &RuntimeLimits,
-) -> Result<LumaValue, luma_runtime::LuaRuntimeError> {
+) -> Result<LymaValue, lyma_runtime::LuaRuntimeError> {
     let compiled =
         engine.compile_expression(LuaSourceText::new("expr", source).with_span(span), limits)?;
     let value = engine.evaluate_expression(&compiled, environment, limits)?;
-    engine.to_luma_value(
+    engine.to_lyma_value(
         &value,
         &ConversionPolicy {
             allow_functions: true,
@@ -36,11 +36,11 @@ fn eval_chunk(
     source: &str,
     span: Span,
     limits: &RuntimeLimits,
-) -> Result<LumaValue, luma_runtime::LuaRuntimeError> {
+) -> Result<LymaValue, lyma_runtime::LuaRuntimeError> {
     let compiled =
         engine.compile_chunk(LuaSourceText::new("chunk", source).with_span(span), limits)?;
     let value = engine.evaluate_chunk(&compiled, environment, limits)?;
-    engine.to_luma_value(
+    engine.to_lyma_value(
         &value,
         &ConversionPolicy {
             origin_span: Some(span),
@@ -85,19 +85,19 @@ fn safe_environment_hides_unsafe_globals_and_escape_hatches() {
 
     assert_eq!(
         eval_expr(&engine, &mut environment, "io", span, &limits).unwrap(),
-        LumaValue::Null(LumaNull)
+        LymaValue::Null(LymaNull)
     );
     assert_eq!(
         eval_expr(&engine, &mut environment, "os", span, &limits).unwrap(),
-        LumaValue::Null(LumaNull)
+        LymaValue::Null(LymaNull)
     );
     assert_eq!(
         eval_expr(&engine, &mut environment, "debug", span, &limits).unwrap(),
-        LumaValue::Null(LumaNull)
+        LymaValue::Null(LymaNull)
     );
     assert_eq!(
         eval_expr(&engine, &mut environment, "package", span, &limits).unwrap(),
-        LumaValue::Null(LumaNull)
+        LymaValue::Null(LymaNull)
     );
 
     for script in [
@@ -131,7 +131,7 @@ fn modules_are_copied_read_only_and_environment_forks_are_isolated() {
     root.inject_context(
         "answer",
         engine
-            .from_luma_value(&LumaValue::Number(LumaNumber::Integer(41)))
+            .from_lyma_value(&LymaValue::Number(LymaNumber::Integer(41)))
             .unwrap(),
     )
     .unwrap();
@@ -141,7 +141,7 @@ fn modules_are_copied_read_only_and_environment_forks_are_isolated() {
             vec![(
                 String::from("answer"),
                 engine
-                    .from_luma_value(&LumaValue::Number(LumaNumber::Integer(42)))
+                    .from_lyma_value(&LymaValue::Number(LymaNumber::Integer(42)))
                     .unwrap(),
             )],
         )
@@ -153,7 +153,7 @@ fn modules_are_copied_read_only_and_environment_forks_are_isolated() {
         .inject_context(
             "answer",
             engine
-                .from_luma_value(&LumaValue::Number(LumaNumber::Integer(99)))
+                .from_lyma_value(&LymaValue::Number(LymaNumber::Integer(99)))
                 .unwrap(),
         )
         .unwrap();
@@ -162,15 +162,15 @@ fn modules_are_copied_read_only_and_environment_forks_are_isolated() {
     let limits = RuntimeLimits::unbounded();
     assert_eq!(
         eval_expr(&engine, &mut root, "answer", span, &limits).unwrap(),
-        LumaValue::Number(LumaNumber::Integer(41))
+        LymaValue::Number(LymaNumber::Integer(41))
     );
     assert_eq!(
         eval_expr(&engine, &mut child, "answer", span, &limits).unwrap(),
-        LumaValue::Number(LumaNumber::Integer(99))
+        LymaValue::Number(LymaNumber::Integer(99))
     );
     assert_eq!(
         eval_expr(&engine, &mut root, "mod.answer", span, &limits).unwrap(),
-        LumaValue::Number(LumaNumber::Integer(42))
+        LymaValue::Number(LymaNumber::Integer(42))
     );
 
     let error = eval_chunk(&engine, &mut root, "mod.answer = 0", span, &limits).unwrap_err();
@@ -181,16 +181,16 @@ fn modules_are_copied_read_only_and_environment_forks_are_isolated() {
 fn null_and_ordered_tables_round_trip() {
     let engine = OmniLuaEngine::default();
     let mut environment = engine.create_environment().unwrap();
-    let mapping = LumaValue::Mapping(LumaMapping {
+    let mapping = LymaValue::Mapping(LymaMapping {
         entries: vec![
-            LumaMappingEntry {
-                key: LumaKey::String(String::from("first")),
-                value: LumaValue::Number(LumaNumber::Integer(1)),
+            LymaMappingEntry {
+                key: LymaKey::String(String::from("first")),
+                value: LymaValue::Number(LymaNumber::Integer(1)),
                 span: None,
             },
-            LumaMappingEntry {
-                key: LumaKey::String(String::from("second")),
-                value: LumaValue::Null(LumaNull),
+            LymaMappingEntry {
+                key: LymaKey::String(String::from("second")),
+                value: LymaValue::Null(LymaNull),
                 span: None,
             },
         ],
@@ -198,7 +198,7 @@ fn null_and_ordered_tables_round_trip() {
         span: None,
     });
     environment
-        .inject_context("ctx", engine.from_luma_value(&mapping).unwrap())
+        .inject_context("ctx", engine.from_lyma_value(&mapping).unwrap())
         .unwrap();
     let span = Span::new(FileId(3), 0, 3);
     let value = eval_expr(
@@ -248,7 +248,7 @@ fn table_entry_limit_is_enforced_during_conversion() {
         .evaluate_expression(&compiled, &mut environment, &limits)
         .unwrap();
     let error = engine
-        .to_luma_value(
+        .to_lyma_value(
             &value,
             &ConversionPolicy {
                 origin_span: Some(span),

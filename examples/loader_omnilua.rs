@@ -1,16 +1,16 @@
-//! Evaluate Luma source with the optional OmniLua backend.
+//! Evaluate Lyma source with the optional OmniLua backend.
 //!
 //! Run with:
 //! `cargo run --example loader_omnilua --features omnilua`
 
 #[cfg(feature = "omnilua")]
 fn main() {
-    use luma::parser::FileId;
-    use luma::runtime::RuntimeLimits;
-    use luma::{Loader, OmniLuaEngine, Parser, Profile};
+    use lyma::parser::FileId;
+    use lyma::runtime::RuntimeLimits;
+    use lyma::{Loader, OmniLuaEngine, Parser, Profile};
 
     let source = "answer: =40 + 2\nmessage: ='hello from lua'\n";
-    let parsed = Parser::new().parse_str(FileId(1), "computed.luma", source);
+    let parsed = Parser::new().parse_str(FileId(1), "computed.lyma", source);
     if !parsed.diagnostics.is_empty() {
         eprintln!("parse diagnostics: {:#?}", parsed.diagnostics);
         std::process::exit(1);
@@ -20,7 +20,7 @@ fn main() {
     let profile = Profile::permissive(RuntimeLimits::unbounded());
     let documents = Loader::new(&engine)
         .profile(&profile)
-        .load_file(&parsed.file, "computed.luma", None)
+        .load_file(&parsed.file, "computed.lyma", None)
         .expect("evaluation succeeds");
 
     println!("evaluated documents: {:#?}", documents);

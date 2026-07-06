@@ -1,46 +1,46 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use luma::tooling::{format_document_edit, serialize_portable_value};
-use luma_syntax::{
-    LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber, LumaSequence, LumaValue,
+use lyma::tooling::{format_document_edit, serialize_portable_value};
+use lyma_syntax::{
+    LymaKey, LymaMapping, LymaMappingEntry, LymaNull, LymaNumber, LymaSequence, LymaValue,
 };
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(source) = std::str::from_utf8(data) {
-        let formatted = format_document_edit("fuzz.luma", source);
+        let formatted = format_document_edit("fuzz.lyma", source);
         let _ = formatted.parsed.diagnostics.len();
         let _ = formatted.formatted.text.len();
     }
 
     let value = value_from_bytes(data, 0, 0).0;
     if let Ok(serialized) = serialize_portable_value(&value) {
-        let formatted = format_document_edit("value.luma", &serialized);
+        let formatted = format_document_edit("value.lyma", &serialized);
         let _ = formatted.parsed.diagnostics.len();
         let _ = formatted.formatted.text.len();
     }
 });
 
-fn value_from_bytes(data: &[u8], mut index: usize, depth: usize) -> (LumaValue, usize) {
+fn value_from_bytes(data: &[u8], mut index: usize, depth: usize) -> (LymaValue, usize) {
     if depth >= 3 || index >= data.len() {
-        return (LumaValue::Null(LumaNull), index);
+        return (LymaValue::Null(LymaNull), index);
     }
 
     let tag = data[index] % 6;
     index += 1;
     match tag {
-        0 => (LumaValue::Null(LumaNull), index),
-        1 => (LumaValue::Boolean(data.get(index).is_some_and(|byte| byte % 2 == 1)), index + 1),
+        0 => (LymaValue::Null(LymaNull), index),
+        1 => (LymaValue::Boolean(data.get(index).is_some_and(|byte| byte % 2 == 1)), index + 1),
         2 => {
             let number = i64::from(*data.get(index).unwrap_or(&0)) - 64;
-            (LumaValue::Number(LumaNumber::Integer(number)), index + 1)
+            (LymaValue::Number(LymaNumber::Integer(number)), index + 1)
         }
         3 => {
             let len = usize::from(*data.get(index).unwrap_or(&0) % 8);
             index += 1;
             let end = index.saturating_add(len).min(data.len());
             let text = String::from_utf8_lossy(&data[index..end]).into_owned();
-            (LumaValue::String(text), end)
+            (LymaValue::String(text), end)
         }
         4 => {
             let len = usize::from(*data.get(index).unwrap_or(&0) % 4);
@@ -52,7 +52,7 @@ fn value_from_bytes(data: &[u8], mut index: usize, depth: usize) -> (LumaValue, 
                 items.push(item);
             }
             (
-                LumaValue::Sequence(LumaSequence { items, span: None }),
+                LymaValue::Sequence(LymaSequence { items, span: None }),
                 index,
             )
         }
@@ -64,14 +64,14 @@ fn value_from_bytes(data: &[u8], mut index: usize, depth: usize) -> (LumaValue, 
                 let key = format!("k{entry_index}");
                 let (value, next) = value_from_bytes(data, index, depth + 1);
                 index = next;
-                entries.push(LumaMappingEntry {
-                    key: LumaKey::String(key),
+                entries.push(LymaMappingEntry {
+                    key: LymaKey::String(key),
                     value,
                     span: None,
                 });
             }
             (
-                LumaValue::Mapping(LumaMapping {
+                LymaValue::Mapping(LymaMapping {
                     entries,
                     duplicate_keys: Vec::new(),
                     span: None,

@@ -1,7 +1,7 @@
 [project]
 name = "examples"
 version = "0.1.0"
-description = "Python examples for the luma-python bindings"
+description = "Python examples for the lyma-python bindings"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = []

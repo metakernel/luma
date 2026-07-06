@@ -1,10 +1,10 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use luma_parser::{FileId, decode_bytes, lex_source, parse_source};
+use lyma_parser::{FileId, decode_bytes, lex_source, parse_source};
 
 fuzz_target!(|data: &[u8]| {
-    let Ok(source) = decode_bytes(FileId(1), "fuzz.luma", data) else {
+    let Ok(source) = decode_bytes(FileId(1), "fuzz.lyma", data) else {
         return;
     };
 

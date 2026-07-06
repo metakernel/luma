@@ -2,10 +2,10 @@
 
 ## Overview
 
-`luma-cli` provides parse, check, eval, format, conformance, and optional LUMBA commands.
+`lyma-cli` provides parse, check, eval, format, conformance, and optional LYBA commands.
 
 ```sh
-cargo run -p luma-cli -- <command>
+cargo run -p lyma-cli -- <command>
 ```
 
 Global flag:
@@ -19,7 +19,7 @@ Global flag:
 Parse only.
 
 ```sh
-cargo run -p luma-cli -- parse app.luma --emit ast
+cargo run -p lyma-cli -- parse app.lyma --emit ast
 ```
 
 `--emit` values:
@@ -33,8 +33,8 @@ cargo run -p luma-cli -- parse app.luma --emit ast
 Parse by default; evaluate when `--evaluate` is set.
 
 ```sh
-cargo run -p luma-cli -- check app.luma
-cargo run -p luma-cli -- check app.luma --evaluate --emit value --engine omnilua
+cargo run -p lyma-cli -- check app.lyma
+cargo run -p lyma-cli -- check app.lyma --evaluate --emit value --engine omnilua
 ```
 
 ### `eval`
@@ -42,12 +42,12 @@ cargo run -p luma-cli -- check app.luma --evaluate --emit value --engine omnilua
 Parse and evaluate.
 
 ```powershell
-cargo run -p luma-cli --features engine-omnilua -- eval app.luma --emit value --engine omnilua
+cargo run -p lyma-cli --features engine-omnilua -- eval app.lyma --emit value --engine omnilua
 ```
 
 If the CLI is built without an evaluation backend, eval returns a stable diagnostic explaining that an engine feature is required.
 
-`luma-cli` uses `EvaluationOptions::default()`, which means restricted evaluation. The current OmniLua backend fails closed when restricted sandbox limits cannot be enforced, so this command is useful as a backend/diagnostic smoke path rather than a turnkey execution profile.
+`lyma-cli` uses `EvaluationOptions::default()`, which means restricted evaluation. The current OmniLua backend fails closed when restricted sandbox limits cannot be enforced, so this command is useful as a backend/diagnostic smoke path rather than a turnkey execution profile.
 
 `--emit` values:
 
@@ -61,7 +61,7 @@ If the CLI is built without an evaluation backend, eval returns a stable diagnos
 Format a document.
 
 ```sh
-cargo run -p luma-cli -- fmt app.luma
+cargo run -p lyma-cli -- fmt app.lyma
 ```
 
 Default emit mode is `source`.
@@ -71,31 +71,31 @@ Default emit mode is `source`.
 Run the conformance harness.
 
 ```sh
-cargo run -p luma-cli -- conformance --all-features
+cargo run -p lyma-cli -- conformance --all-features
 ```
 
-### `lumba` (`--features lumba`)
+### `lyba` (`--features lyba`)
 
-Opt-in LUMBA encode/decode/inspect/verify support.
+Opt-in LYBA encode/decode/inspect/verify support.
 
 The feature gate is explicit at both layers:
 
-- library: `luma = { version = "0.1", features = ["lumba"] }`
-- CLI: `cargo run -p luma-cli --features lumba -- lumba ...`
+- library: `lyma = { version = "0.1", features = ["lyba"] }`
+- CLI: `cargo run -p lyma-cli --features lyba -- lyba ...`
 
 ```sh
-cargo run -p luma-cli --features lumba -- lumba encode values.luma values.lumba --mode runtime-data --footer --checksum crc32c
-cargo run -p luma-cli --features lumba -- lumba decode values.lumba --trusted
-cargo run -p luma-cli --features lumba -- lumba inspect values.lumba --emit capabilities --trusted
-cargo run -p luma-cli --features lumba -- lumba verify values.lumba
+cargo run -p lyma-cli --features lyba -- lyba encode values.lyma values.lyba --mode runtime-data --footer --checksum crc32c
+cargo run -p lyma-cli --features lyba -- lyba decode values.lyba --trusted
+cargo run -p lyma-cli --features lyba -- lyba inspect values.lyba --emit capabilities --trusted
+cargo run -p lyma-cli --features lyba -- lyba verify values.lyba
 ```
 
 Subcommands:
 
-- `encode <input.luma> <output.lumba>` parses static LUMA values and writes a LUMBA file without evaluating Lua/imports/includes
-- `decode <input.lumba>` reads inert root values from any supported LUMBA mode
-- `inspect <input.lumba>` emits `header`, `sections`, `values`, `resources`, or `capabilities`
-- `verify <input.lumba>` validates the file and reports verifier diagnostics
+- `encode <input.lyma> <output.lyba>` parses static LYMA values and writes a LYBA file without evaluating Lua/imports/includes
+- `decode <input.lyba>` reads inert root values from any supported LYBA mode
+- `inspect <input.lyba>` emits `header`, `sections`, `values`, `resources`, or `capabilities`
+- `verify <input.lyba>` validates the file and reports verifier diagnostics
 
 Writer mode mapping:
 
@@ -109,7 +109,7 @@ Writer mode mapping:
 | `--canonical` | `WriterMode::Canonical(Relaxed)` | relaxed canonical output |
 | `--strict` | `WriterMode::Canonical(Strict)` | strict canonical output |
 
-Common LUMBA flags:
+Common LYBA flags:
 
 - `--mode value|runtime-data|editor-cache|bundle|fixture`
 - `--canonical` for relaxed canonical writer mode
@@ -123,7 +123,7 @@ Encode-only flags:
 - `--footer` emits the fixed footer
 - `--checksum none|crc32c` sets section-entry checksum metadata
 
-Default LUMBA CLI limits match `luma-lumba`'s public API preset:
+Default LYBA CLI limits match `lyma-lyba`'s public API preset:
 
 - max input bytes: 8 MiB
 - max decoded logical bytes per section: 16 MiB
@@ -151,7 +151,7 @@ Supported draft coverage in the current implementation is Level 0-5 section fami
 
 ## No-subcommand mode
 
-Running `luma INPUT` behaves like `check INPUT` and supports:
+Running `lyma INPUT` behaves like `check INPUT` and supports:
 
 - `--emit`
 - `--evaluate`

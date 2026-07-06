@@ -6,15 +6,15 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 
-use crate::lumba;
+use crate::lyba;
 use crate::parser::FileId;
 use crate::syntax::{
-    LumaKey, LumaMapping, LumaMappingEntry, LumaNumber, LumaSequence, LumaTag, LumaTagName,
-    LumaTaggedValue,
+    LymaKey, LymaMapping, LymaMappingEntry, LymaNumber, LymaSequence, LymaTag, LymaTagName,
+    LymaTaggedValue,
 };
-use crate::{LumaNull, LumaValue, SyntaxIndex, SyntaxNodeId};
+use crate::{LymaNull, LymaValue, SyntaxIndex, SyntaxNodeId};
 
-#[pyclass(module = "luma", skip_from_py_object)]
+#[pyclass(module = "lymapy", skip_from_py_object)]
 #[derive(Debug, Default, Clone, Copy)]
 struct Parser;
 
@@ -79,47 +79,47 @@ fn format_str(py: Python<'_>, file_id: u32, name: &str, text: &str) -> PyResult<
 }
 
 #[pyfunction]
-fn to_lumba_value_image(py: Python<'_>, values: &Bound<'_, PyAny>) -> PyResult<Py<PyBytes>> {
-    let values = py_to_luma_values(values)?;
-    let bytes = lumba::try_to_lumba_value_image(&values).map_err(lumba_error)?;
+fn to_lyba_value_image(py: Python<'_>, values: &Bound<'_, PyAny>) -> PyResult<Py<PyBytes>> {
+    let values = py_to_lyma_values(values)?;
+    let bytes = lyba::try_to_lyba_value_image(&values).map_err(lyba_error)?;
     Ok(PyBytes::new(py, &bytes).unbind())
 }
 
 #[pyfunction]
-fn from_lumba_value_image(py: Python<'_>, bytes: &[u8]) -> PyResult<Py<PyAny>> {
-    let values = lumba::try_from_lumba_value_image(bytes).map_err(lumba_error)?;
+fn from_lyba_value_image(py: Python<'_>, bytes: &[u8]) -> PyResult<Py<PyAny>> {
+    let values = lyba::try_from_lyba_value_image(bytes).map_err(lyba_error)?;
     let out = PyList::empty(py);
     for value in &values {
-        out.append(luma_value_to_py(py, value)?)?;
+        out.append(lyma_value_to_py(py, value)?)?;
     }
     Ok(out.into_any().unbind())
 }
 
 #[pyfunction]
-fn read_lumba_value_image(py: Python<'_>, bytes: &[u8]) -> PyResult<Py<PyAny>> {
-    from_lumba_value_image(py, bytes)
+fn read_lyba_value_image(py: Python<'_>, bytes: &[u8]) -> PyResult<Py<PyAny>> {
+    from_lyba_value_image(py, bytes)
 }
 
 #[pyfunction]
-fn write_lumba_value_image(py: Python<'_>, values: &Bound<'_, PyAny>) -> PyResult<Py<PyBytes>> {
-    to_lumba_value_image(py, values)
+fn write_lyba_value_image(py: Python<'_>, values: &Bound<'_, PyAny>) -> PyResult<Py<PyBytes>> {
+    to_lyba_value_image(py, values)
 }
 
 #[pymodule]
-fn luma(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
+fn lyma(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Parser>()?;
     module.add_function(wrap_pyfunction!(version, module)?)?;
     module.add_function(wrap_pyfunction!(parse_str, module)?)?;
     module.add_function(wrap_pyfunction!(format_str, module)?)?;
-    module.add_function(wrap_pyfunction!(to_lumba_value_image, module)?)?;
-    module.add_function(wrap_pyfunction!(from_lumba_value_image, module)?)?;
+    module.add_function(wrap_pyfunction!(to_lyba_value_image, module)?)?;
+    module.add_function(wrap_pyfunction!(from_lyba_value_image, module)?)?;
 
-    let lumba_module = PyModule::new(py, "lumba")?;
-    lumba_module.add_function(wrap_pyfunction!(to_lumba_value_image, &lumba_module)?)?;
-    lumba_module.add_function(wrap_pyfunction!(from_lumba_value_image, &lumba_module)?)?;
-    lumba_module.add_function(wrap_pyfunction!(read_lumba_value_image, &lumba_module)?)?;
-    lumba_module.add_function(wrap_pyfunction!(write_lumba_value_image, &lumba_module)?)?;
-    module.add_submodule(&lumba_module)?;
+    let lyba_module = PyModule::new(py, "lyba")?;
+    lyba_module.add_function(wrap_pyfunction!(to_lyba_value_image, &lyba_module)?)?;
+    lyba_module.add_function(wrap_pyfunction!(from_lyba_value_image, &lyba_module)?)?;
+    lyba_module.add_function(wrap_pyfunction!(read_lyba_value_image, &lyba_module)?)?;
+    lyba_module.add_function(wrap_pyfunction!(write_lyba_value_image, &lyba_module)?)?;
+    module.add_submodule(&lyba_module)?;
     Ok(())
 }
 
@@ -194,60 +194,60 @@ fn span_to_py(py: Python<'_>, span: crate::syntax::Span) -> PyResult<Py<PyAny>> 
     Ok(out.into_any().unbind())
 }
 
-fn py_to_luma_values(values: &Bound<'_, PyAny>) -> PyResult<Vec<LumaValue>> {
+fn py_to_lyma_values(values: &Bound<'_, PyAny>) -> PyResult<Vec<LymaValue>> {
     if let Ok(list) = values.cast::<PyList>() {
-        list.iter().map(|item| py_to_luma_value(&item)).collect()
+        list.iter().map(|item| py_to_lyma_value(&item)).collect()
     } else if let Ok(tuple) = values.cast::<PyTuple>() {
-        tuple.iter().map(|item| py_to_luma_value(&item)).collect()
+        tuple.iter().map(|item| py_to_lyma_value(&item)).collect()
     } else {
-        Ok(vec![py_to_luma_value(values)?])
+        Ok(vec![py_to_lyma_value(values)?])
     }
 }
 
-fn py_to_luma_value(obj: &Bound<'_, PyAny>) -> PyResult<LumaValue> {
+fn py_to_lyma_value(obj: &Bound<'_, PyAny>) -> PyResult<LymaValue> {
     if obj.is_none() {
-        return Ok(LumaValue::Null(LumaNull));
+        return Ok(LymaValue::Null(LymaNull));
     }
     if obj.is_instance_of::<PyBool>() {
-        return Ok(LumaValue::Boolean(obj.extract()?));
+        return Ok(LymaValue::Boolean(obj.extract()?));
     }
     if obj.is_instance_of::<PyInt>() {
-        return Ok(LumaValue::Number(LumaNumber::Integer(obj.extract()?)));
+        return Ok(LymaValue::Number(LymaNumber::Integer(obj.extract()?)));
     }
     if obj.is_instance_of::<PyFloat>() {
         let value = obj.extract::<f64>()?;
         if !value.is_finite() {
-            return Err(PyValueError::new_err("Luma floats must be finite"));
+            return Err(PyValueError::new_err("Lyma floats must be finite"));
         }
-        return Ok(LumaValue::Number(LumaNumber::Float(value)));
+        return Ok(LymaValue::Number(LymaNumber::Float(value)));
     }
     if obj.is_instance_of::<PyString>() {
-        return Ok(LumaValue::String(obj.extract()?));
+        return Ok(LymaValue::String(obj.extract()?));
     }
     if let Ok(list) = obj.cast::<PyList>() {
         let items = list
             .iter()
-            .map(|item| py_to_luma_value(&item))
+            .map(|item| py_to_lyma_value(&item))
             .collect::<PyResult<_>>()?;
-        return Ok(LumaValue::Sequence(LumaSequence { items, span: None }));
+        return Ok(LymaValue::Sequence(LymaSequence { items, span: None }));
     }
     if let Ok(tuple) = obj.cast::<PyTuple>() {
         let items = tuple
             .iter()
-            .map(|item| py_to_luma_value(&item))
+            .map(|item| py_to_lyma_value(&item))
             .collect::<PyResult<_>>()?;
-        return Ok(LumaValue::Sequence(LumaSequence { items, span: None }));
+        return Ok(LymaValue::Sequence(LymaSequence { items, span: None }));
     }
     if let Ok(dict) = obj.cast::<PyDict>() {
         if let (Ok(Some(tag)), Ok(Some(value))) =
-            (dict.get_item("__luma_tag__"), dict.get_item("value"))
+            (dict.get_item("__lyma_tag__"), dict.get_item("value"))
         {
             let tag = tag.extract::<String>()?;
-            let value = py_to_luma_value(&value)?;
+            let value = py_to_lyma_value(&value)?;
             let span = crate::syntax::Span::new(FileId(0), 0, 0);
-            return Ok(LumaValue::Tagged(LumaTaggedValue {
-                tag: LumaTag {
-                    name: LumaTagName { value: tag, span },
+            return Ok(LymaValue::Tagged(LymaTaggedValue {
+                tag: LymaTag {
+                    name: LymaTagName { value: tag, span },
                     span,
                 },
                 value: Box::new(value),
@@ -257,13 +257,13 @@ fn py_to_luma_value(obj: &Bound<'_, PyAny>) -> PyResult<LumaValue> {
 
         let mut entries = Vec::with_capacity(dict.len());
         for (key, value) in dict.iter() {
-            entries.push(LumaMappingEntry {
-                key: py_to_luma_key(&key)?,
-                value: py_to_luma_value(&value)?,
+            entries.push(LymaMappingEntry {
+                key: py_to_lyma_key(&key)?,
+                value: py_to_lyma_value(&value)?,
                 span: None,
             });
         }
-        return Ok(LumaValue::Mapping(LumaMapping {
+        return Ok(LymaValue::Mapping(LymaMapping {
             entries,
             duplicate_keys: Vec::new(),
             span: None,
@@ -274,66 +274,66 @@ fn py_to_luma_value(obj: &Bound<'_, PyAny>) -> PyResult<LumaValue> {
     ))
 }
 
-fn py_to_luma_key(obj: &Bound<'_, PyAny>) -> PyResult<LumaKey> {
+fn py_to_lyma_key(obj: &Bound<'_, PyAny>) -> PyResult<LymaKey> {
     if obj.is_instance_of::<PyBool>() {
-        Ok(LumaKey::Boolean(obj.extract()?))
+        Ok(LymaKey::Boolean(obj.extract()?))
     } else if obj.is_instance_of::<PyInt>() {
-        Ok(LumaKey::Number(LumaNumber::Integer(obj.extract()?)))
+        Ok(LymaKey::Number(LymaNumber::Integer(obj.extract()?)))
     } else if obj.is_instance_of::<PyFloat>() {
         let value = obj.extract::<f64>()?;
         if !value.is_finite() {
-            return Err(PyValueError::new_err("Luma numeric keys must be finite"));
+            return Err(PyValueError::new_err("Lyma numeric keys must be finite"));
         }
-        Ok(LumaKey::Number(LumaNumber::Float(value)))
+        Ok(LymaKey::Number(LymaNumber::Float(value)))
     } else if obj.is_instance_of::<PyString>() {
-        Ok(LumaKey::String(obj.extract()?))
+        Ok(LymaKey::String(obj.extract()?))
     } else {
         Err(PyTypeError::new_err(
-            "Luma mapping keys must be bool, int, float, or str",
+            "Lyma mapping keys must be bool, int, float, or str",
         ))
     }
 }
 
-fn luma_value_to_py(py: Python<'_>, value: &LumaValue) -> PyResult<Py<PyAny>> {
+fn lyma_value_to_py(py: Python<'_>, value: &LymaValue) -> PyResult<Py<PyAny>> {
     match value {
-        LumaValue::Null(_) => Ok(py.None()),
-        LumaValue::Boolean(value) => value.into_py_any(py),
-        LumaValue::Number(LumaNumber::Integer(value)) => value.into_py_any(py),
-        LumaValue::Number(LumaNumber::Float(value)) => value.into_py_any(py),
-        LumaValue::String(value) => value.into_py_any(py),
-        LumaValue::Sequence(sequence) => {
+        LymaValue::Null(_) => Ok(py.None()),
+        LymaValue::Boolean(value) => value.into_py_any(py),
+        LymaValue::Number(LymaNumber::Integer(value)) => value.into_py_any(py),
+        LymaValue::Number(LymaNumber::Float(value)) => value.into_py_any(py),
+        LymaValue::String(value) => value.into_py_any(py),
+        LymaValue::Sequence(sequence) => {
             let out = PyList::empty(py);
             for item in &sequence.items {
-                out.append(luma_value_to_py(py, item)?)?;
+                out.append(lyma_value_to_py(py, item)?)?;
             }
             Ok(out.into_any().unbind())
         }
-        LumaValue::Mapping(mapping) => mapping_to_py(py, mapping),
-        LumaValue::Tagged(tagged) => {
+        LymaValue::Mapping(mapping) => mapping_to_py(py, mapping),
+        LymaValue::Tagged(tagged) => {
             let out = PyDict::new(py);
-            out.set_item("__luma_tag__", &tagged.tag.name.value)?;
-            out.set_item("value", luma_value_to_py(py, &tagged.value)?)?;
+            out.set_item("__lyma_tag__", &tagged.tag.name.value)?;
+            out.set_item("value", lyma_value_to_py(py, &tagged.value)?)?;
             Ok(out.into_any().unbind())
         }
-        LumaValue::Function(value) | LumaValue::UserData(value) | LumaValue::HostObject(value) => {
+        LymaValue::Function(value) | LymaValue::UserData(value) | LymaValue::HostObject(value) => {
             let out = PyDict::new(py);
-            out.set_item("__luma_host__", &value.kind)?;
+            out.set_item("__lyma_host__", &value.kind)?;
             out.set_item("label", &value.label)?;
             Ok(out.into_any().unbind())
         }
     }
 }
 
-fn mapping_to_py(py: Python<'_>, mapping: &LumaMapping) -> PyResult<Py<PyAny>> {
+fn mapping_to_py(py: Python<'_>, mapping: &LymaMapping) -> PyResult<Py<PyAny>> {
     let all_string_keys = mapping
         .entries
         .iter()
-        .all(|entry| matches!(entry.key, LumaKey::String(_)));
+        .all(|entry| matches!(entry.key, LymaKey::String(_)));
     if all_string_keys {
         let out = PyDict::new(py);
         for entry in &mapping.entries {
-            if let LumaKey::String(key) = &entry.key {
-                out.set_item(key, luma_value_to_py(py, &entry.value)?)?;
+            if let LymaKey::String(key) = &entry.key {
+                out.set_item(key, lyma_value_to_py(py, &entry.value)?)?;
             }
         }
         Ok(out.into_any().unbind())
@@ -343,33 +343,33 @@ fn mapping_to_py(py: Python<'_>, mapping: &LumaMapping) -> PyResult<Py<PyAny>> {
             let pair = PyTuple::new(
                 py,
                 [
-                    luma_key_to_py(py, &entry.key)?,
-                    luma_value_to_py(py, &entry.value)?,
+                    lyma_key_to_py(py, &entry.key)?,
+                    lyma_value_to_py(py, &entry.value)?,
                 ],
             )?;
             pairs.append(pair)?;
         }
         let out = PyDict::new(py);
-        out.set_item("__luma_mapping__", pairs)?;
+        out.set_item("__lyma_mapping__", pairs)?;
         Ok(out.into_any().unbind())
     }
 }
 
-fn luma_key_to_py(py: Python<'_>, key: &LumaKey) -> PyResult<Py<PyAny>> {
+fn lyma_key_to_py(py: Python<'_>, key: &LymaKey) -> PyResult<Py<PyAny>> {
     match key {
-        LumaKey::String(value) => value.into_py_any(py),
-        LumaKey::Number(LumaNumber::Integer(value)) => value.into_py_any(py),
-        LumaKey::Number(LumaNumber::Float(value)) => value.into_py_any(py),
-        LumaKey::Boolean(value) => value.into_py_any(py),
-        LumaKey::Host(value) => {
+        LymaKey::String(value) => value.into_py_any(py),
+        LymaKey::Number(LymaNumber::Integer(value)) => value.into_py_any(py),
+        LymaKey::Number(LymaNumber::Float(value)) => value.into_py_any(py),
+        LymaKey::Boolean(value) => value.into_py_any(py),
+        LymaKey::Host(value) => {
             let out = PyDict::new(py);
-            out.set_item("__luma_host_key__", &value.kind)?;
+            out.set_item("__lyma_host_key__", &value.kind)?;
             out.set_item("label", &value.label)?;
             Ok(out.into_any().unbind())
         }
     }
 }
 
-fn lumba_error(error: lumba::LumbaError) -> PyErr {
+fn lyba_error(error: lyba::LybaError) -> PyErr {
     PyValueError::new_err(format!("{}: {}", error.code().as_str(), error))
 }

@@ -1,9 +1,9 @@
 use std::{fs, path::Path};
 
-use luma::tooling::{format_document_edit, serialize_portable_value};
-use luma_syntax::{
-    FileId, LumaHostValue, LumaKey, LumaMapping, LumaMappingEntry, LumaNull, LumaNumber,
-    LumaSequence, LumaValue,
+use lyma::tooling::{format_document_edit, serialize_portable_value};
+use lyma_syntax::{
+    FileId, LymaHostValue, LymaKey, LymaMapping, LymaMappingEntry, LymaNull, LymaNumber,
+    LymaSequence, LymaValue,
 };
 
 #[test]
@@ -12,7 +12,7 @@ fn level4_formatter_fixtures_match_canonical_snapshots() {
     let mut inputs = fs::read_dir(&fixture_dir)
         .unwrap()
         .map(|entry| entry.unwrap().path())
-        .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("luma"))
+        .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("lyma"))
         .collect::<Vec<_>>();
     inputs.sort();
 
@@ -33,24 +33,24 @@ fn level4_formatter_fixtures_match_canonical_snapshots() {
 
 #[test]
 fn level4_serializer_fixture_matches_canonical_snapshot() {
-    let value = LumaValue::Mapping(LumaMapping {
+    let value = LymaValue::Mapping(LymaMapping {
         entries: vec![
-            LumaMappingEntry {
-                key: LumaKey::String(String::from("name")),
-                value: LumaValue::String(String::from("Example")),
+            LymaMappingEntry {
+                key: LymaKey::String(String::from("name")),
+                value: LymaValue::String(String::from("Example")),
                 span: None,
             },
-            LumaMappingEntry {
-                key: LumaKey::String(String::from("enabled")),
-                value: LumaValue::Boolean(true),
+            LymaMappingEntry {
+                key: LymaKey::String(String::from("enabled")),
+                value: LymaValue::Boolean(true),
                 span: None,
             },
-            LumaMappingEntry {
-                key: LumaKey::String(String::from("items")),
-                value: LumaValue::Sequence(LumaSequence {
+            LymaMappingEntry {
+                key: LymaKey::String(String::from("items")),
+                value: LymaValue::Sequence(LymaSequence {
                     items: vec![
-                        LumaValue::Null(LumaNull),
-                        LumaValue::Number(LumaNumber::Integer(2)),
+                        LymaValue::Null(LymaNull),
+                        LymaValue::Number(LymaNumber::Integer(2)),
                     ],
                     span: None,
                 }),
@@ -67,15 +67,15 @@ fn level4_serializer_fixture_matches_canonical_snapshot() {
 #[test]
 fn level4_serializer_rejects_non_portable_runtime_values() {
     for value in [
-        LumaValue::Function(LumaHostValue {
+        LymaValue::Function(LymaHostValue {
             kind: String::from("fn"),
             label: None,
         }),
-        LumaValue::UserData(LumaHostValue {
+        LymaValue::UserData(LymaHostValue {
             kind: String::from("userdata"),
             label: None,
         }),
-        LumaValue::HostObject(LumaHostValue {
+        LymaValue::HostObject(LymaHostValue {
             kind: String::from("host"),
             label: None,
         }),
@@ -87,10 +87,10 @@ fn level4_serializer_rejects_non_portable_runtime_values() {
 
 #[test]
 fn level4_serializer_rejects_non_string_keys_and_non_finite_numbers() {
-    let mapping = LumaValue::Mapping(LumaMapping {
-        entries: vec![LumaMappingEntry {
-            key: LumaKey::Number(LumaNumber::Integer(1)),
-            value: LumaValue::String(String::from("value")),
+    let mapping = LymaValue::Mapping(LymaMapping {
+        entries: vec![LymaMappingEntry {
+            key: LymaKey::Number(LymaNumber::Integer(1)),
+            value: LymaValue::String(String::from("value")),
             span: None,
         }],
         duplicate_keys: Vec::new(),
@@ -101,12 +101,12 @@ fn level4_serializer_rejects_non_string_keys_and_non_finite_numbers() {
         "E0030"
     );
 
-    let nan = LumaValue::Number(LumaNumber::Float(f64::NAN));
+    let nan = LymaValue::Number(LymaNumber::Float(f64::NAN));
     assert_eq!(
         serialize_portable_value(&nan).unwrap_err().code.code(),
         "E0030"
     );
-    let inf = LumaValue::Number(LumaNumber::Float(f64::INFINITY));
+    let inf = LymaValue::Number(LymaNumber::Float(f64::INFINITY));
     assert_eq!(
         serialize_portable_value(&inf).unwrap_err().code.code(),
         "E0030"
@@ -116,11 +116,11 @@ fn level4_serializer_rejects_non_string_keys_and_non_finite_numbers() {
 #[test]
 fn level4_tooling_emits_full_document_replace_edits() {
     let source = "root:\r\n  value: 'hello'\r\n";
-    let (formatted, edit) = luma::tooling::format_document_text_edit("editor.luma", source);
+    let (formatted, edit) = lyma::tooling::format_document_text_edit("editor.lyma", source);
     assert!(formatted.parsed.diagnostics.is_empty());
     assert_eq!(
         edit.range,
-        luma::tooling::TextRange {
+        lyma::tooling::TextRange {
             start: 0,
             end: source.len()
         }
@@ -130,7 +130,7 @@ fn level4_tooling_emits_full_document_replace_edits() {
 
 #[test]
 fn level4_cycle_rejection_is_covered_by_runtime_conversion_conformance() {
-    let diagnostic = serialize_portable_value(&LumaValue::Null(LumaNull)).unwrap();
+    let diagnostic = serialize_portable_value(&LymaValue::Null(LymaNull)).unwrap();
     assert_eq!(diagnostic, "null\n");
     let _ = FileId(1);
 }

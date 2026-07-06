@@ -2,14 +2,14 @@
 
 ## Naming
 
-Luma is documented as **LUa Markup Assembly**.
+Lyma is documented as **LUa Markup Assembly**.
 
 ## Architecture notes
 
 - parsing/formatting are separate from evaluation
 - evaluator semantics are intended to be backend-neutral
 - OmniLua is optional, not part of the parser contract
-- the root `luma` crate is the public facade
+- the root `lyma` crate is the public facade
 
 ## Profile notes
 

@@ -1,0 +1,17 @@
+[package]
+name = "lyma-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+lyma-syntax = { path = "../lyma-syntax" }
+
+[lints]
+workspace = true

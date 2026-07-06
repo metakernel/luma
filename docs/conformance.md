@@ -12,15 +12,15 @@ cargo test --test conformance --all-features
 
 Supported filters:
 
-- `LUMA_CONFORMANCE_LEVEL`
-- `LUMA_CONFORMANCE_SECTION`
-- `LUMA_CONFORMANCE_PROFILE`
-- `LUMA_CONFORMANCE_BACKEND`
+- `LYMA_CONFORMANCE_LEVEL`
+- `LYMA_CONFORMANCE_SECTION`
+- `LYMA_CONFORMANCE_PROFILE`
+- `LYMA_CONFORMANCE_BACKEND`
 
 Example:
 
 ```powershell
-$env:LUMA_CONFORMANCE_LEVEL='level3'; $env:LUMA_CONFORMANCE_BACKEND='omnilua'; cargo test --test conformance --all-features
+$env:LYMA_CONFORMANCE_LEVEL='level3'; $env:LYMA_CONFORMANCE_BACKEND='omnilua'; cargo test --test conformance --all-features
 ```
 
 ## Matrix
@@ -39,14 +39,14 @@ $env:LUMA_CONFORMANCE_LEVEL='level3'; $env:LUMA_CONFORMANCE_BACKEND='omnilua'; c
 - Level 2/3 require the `eval` feature; OmniLua-specific coverage additionally requires `engine-omnilua`.
 - Level 4 verifies canonical formatting and portable-value serialization through
   the tooling facade.
-- `luma::tooling::serialize_portable_value` intentionally remains the
-  `luma_syntax`-level wrapper for existing `LumaValue` users; typed Rust `serde`
-  entry points live in `luma-serde` / `luma::serde` and feed the same portable
+- `lyma::tooling::serialize_portable_value` intentionally remains the
+  `lyma_syntax`-level wrapper for existing `LymaValue` users; typed Rust `serde`
+  entry points live in `lyma-serde` / `lyma::serde` and feed the same portable
   value model rather than replacing this conformance surface.
 
 ## What conformance means here
 
-Luma uses conformance tests to lock down:
+Lyma uses conformance tests to lock down:
 
 - stable diagnostics
 - stable AST/value behavior
