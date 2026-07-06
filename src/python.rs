@@ -6,13 +6,13 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 
-use luma::lumba;
-use luma::parser::FileId;
-use luma::syntax::{
+use crate::lumba;
+use crate::parser::FileId;
+use crate::syntax::{
     LumaKey, LumaMapping, LumaMappingEntry, LumaNumber, LumaSequence, LumaTag, LumaTagName,
     LumaTaggedValue,
 };
-use luma::{LumaNull, LumaValue, SyntaxIndex, SyntaxNodeId};
+use crate::{LumaNull, LumaValue, SyntaxIndex, SyntaxNodeId};
 
 #[pyclass(module = "luma_python", skip_from_py_object)]
 #[derive(Debug, Default, Clone, Copy)]
@@ -48,12 +48,12 @@ impl Parser {
 
 #[pyfunction]
 fn version() -> &'static str {
-    luma::version()
+    crate::version()
 }
 
 #[pyfunction]
 fn parse_str(py: Python<'_>, file_id: u32, name: &str, text: &str) -> PyResult<Py<PyDict>> {
-    let parsed = luma::Parser::new().parse_str(FileId(file_id), name, text);
+    let parsed = crate::Parser::new().parse_str(FileId(file_id), name, text);
     let out = PyDict::new(py);
     out.set_item("source", parsed.source.as_str())?;
     out.set_item("document_count", parsed.file.documents.len())?;
@@ -67,7 +67,7 @@ fn parse_str(py: Python<'_>, file_id: u32, name: &str, text: &str) -> PyResult<P
 
 #[pyfunction]
 fn format_str(py: Python<'_>, file_id: u32, name: &str, text: &str) -> PyResult<Py<PyDict>> {
-    let formatted = luma::parser::format_str(FileId(file_id), name, text);
+    let formatted = crate::parser::format_str(FileId(file_id), name, text);
     let out = PyDict::new(py);
     out.set_item("text", formatted.formatted.text)?;
     out.set_item("changed", formatted.formatted.changed)?;
@@ -123,7 +123,7 @@ fn luma_python(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn diagnostics_to_py(py: Python<'_>, diagnostics: &[luma::Diagnostic]) -> PyResult<Py<PyAny>> {
+fn diagnostics_to_py(py: Python<'_>, diagnostics: &[crate::Diagnostic]) -> PyResult<Py<PyAny>> {
     let out = PyList::empty(py);
     for diagnostic in diagnostics {
         let item = PyDict::new(py);
@@ -179,14 +179,14 @@ fn push_syntax_node(
     Ok(())
 }
 
-fn option_span_to_py(py: Python<'_>, span: Option<luma::syntax::Span>) -> PyResult<Py<PyAny>> {
+fn option_span_to_py(py: Python<'_>, span: Option<crate::syntax::Span>) -> PyResult<Py<PyAny>> {
     match span {
         Some(span) => span_to_py(py, span),
         None => Ok(py.None()),
     }
 }
 
-fn span_to_py(py: Python<'_>, span: luma::syntax::Span) -> PyResult<Py<PyAny>> {
+fn span_to_py(py: Python<'_>, span: crate::syntax::Span) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
     out.set_item("file_id", span.file_id.0)?;
     out.set_item("start", span.start)?;
@@ -244,7 +244,7 @@ fn py_to_luma_value(obj: &Bound<'_, PyAny>) -> PyResult<LumaValue> {
         {
             let tag = tag.extract::<String>()?;
             let value = py_to_luma_value(&value)?;
-            let span = luma::syntax::Span::new(FileId(0), 0, 0);
+            let span = crate::syntax::Span::new(FileId(0), 0, 0);
             return Ok(LumaValue::Tagged(LumaTaggedValue {
                 tag: LumaTag {
                     name: LumaTagName { value: tag, span },

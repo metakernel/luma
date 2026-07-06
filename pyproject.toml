@@ -14,10 +14,10 @@ classifiers = [
 ]
 
 [tool.maturin]
-features = ["pyo3/extension-module"]
+features = ["python"]
 module-name = "luma_python"
 
 [tool.uv.workspace]
 members = [
-    "examples",
+    "examples/python",
 ]

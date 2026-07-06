@@ -6,7 +6,7 @@ from pathlib import Path
 import luma_python as luma
 
 
-EXAMPLE_FILE = Path(__file__).with_name("complex_config.luma")
+EXAMPLE_FILE = Path(__file__).with_name("example.luma")
 
 
 def run() -> None:

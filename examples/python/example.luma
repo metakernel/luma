@@ -29,7 +29,7 @@ app:
     created_by: python-example
     nullable: null
     paths:
-      source: "examples/complex_config.luma"
+      source: "examples/python/example.luma"
       output: "target/examples"
 ---
 environment:

@@ -30,3 +30,8 @@ rustc-ice-*.txt
 # Local cargo configuration and coverage artifacts
 .cargo/
 coverage/
+
+# Python artifacts
+__pycache__/
+*.py[codz]
+*$py.class

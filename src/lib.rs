@@ -76,10 +76,13 @@
 //! # }
 //! ```
 
-#![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "python"), forbid(unsafe_code))]
 
 pub mod prelude;
 pub mod tooling;
+
+#[cfg(feature = "python")]
+mod python;
 
 #[cfg(feature = "syntax")]
 pub use luma_syntax as syntax;

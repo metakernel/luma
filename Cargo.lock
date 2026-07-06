@@ -343,6 +343,7 @@ dependencies = [
  "luma-runtime",
  "luma-serde",
  "luma-syntax",
+ "pyo3",
 ]
 
 [[package]]
@@ -394,14 +395,6 @@ name = "luma-parser"
 version = "0.1.0"
 dependencies = [
  "luma-syntax",
-]
-
-[[package]]
-name = "luma-python"
-version = "0.1.0"
-dependencies = [
- "luma",
- "pyo3",
 ]
 
 [[package]]
