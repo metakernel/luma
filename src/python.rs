@@ -14,7 +14,7 @@ use crate::syntax::{
 };
 use crate::{LumaNull, LumaValue, SyntaxIndex, SyntaxNodeId};
 
-#[pyclass(module = "luma_python", skip_from_py_object)]
+#[pyclass(module = "luma", skip_from_py_object)]
 #[derive(Debug, Default, Clone, Copy)]
 struct Parser;
 
@@ -106,7 +106,7 @@ fn write_lumba_value_image(py: Python<'_>, values: &Bound<'_, PyAny>) -> PyResul
 }
 
 #[pymodule]
-fn luma_python(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
+fn luma(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Parser>()?;
     module.add_function(wrap_pyfunction!(version, module)?)?;
     module.add_function(wrap_pyfunction!(parse_str, module)?)?;

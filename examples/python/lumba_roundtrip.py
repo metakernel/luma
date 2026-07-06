@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import luma_python as luma
+import luma as luma
 
 
 VALUES = [

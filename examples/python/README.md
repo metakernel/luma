@@ -18,4 +18,4 @@ python lumba_roundtrip.py
 `parse_and_format.py` opens `example.luma` from disk, then shows the
 parser, diagnostics, syntax index, and formatter.
 `lumba_roundtrip.py` shows binary LUMBA value-image encoding and decoding through
-both the top-level module functions and the `luma_python.lumba` submodule.
+both the top-level module functions and the `luma.lumba` submodule.
