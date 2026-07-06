@@ -1,0 +1,18 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "luma-python"
+version = "0.1.0"
+description = "Python bindings for Luma and LUMBA"
+requires-python = ">=3.8"
+license = { text = "MIT OR Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "luma_python"

@@ -43,6 +43,7 @@ members = [
     "crates/luma-runtime",
     "crates/luma-engine-omnilua",
     "crates/luma-cli",
+    "crates/luma-python",
 ]
 
 [workspace.package]
