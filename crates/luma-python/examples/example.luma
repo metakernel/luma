@@ -1,0 +1,53 @@
+# Complex parser fixture used by parse_and_format.py.
+app:
+  name: "Luma Python Demo"
+  version: 1
+  enabled: true
+  release:
+    channel: beta
+    build: 0xff
+    ratio: 0.875
+  owners:
+    - name: Ada Lovelace
+      role: engineer
+      active: true
+    - name: Grace Hopper
+      role: maintainer
+      active: false
+  features:
+    parser:
+      status: stable
+      tags:
+        - syntax-index
+        - diagnostics
+    lumba:
+      status: preview
+      tags:
+        - binary
+        - roundtrip
+  metadata: !record
+    created_by: python-example
+    nullable: null
+    paths:
+      source: "examples/complex_config.luma"
+      output: "target/examples"
+---
+environment:
+  default_region: us-east
+  retries:
+    count: 3
+    backoff_seconds:
+      - 0.5
+      - 1.0
+      - 2.0
+  matrix:
+    - os: windows
+      python: "3.12"
+      maturin: true
+    - os: linux
+      python: "3.11"
+      maturin: true
+  notes:
+    - "This second document proves multi-document parsing."
+    - "The Python example reads this file from disk."
+...

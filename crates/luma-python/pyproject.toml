@@ -16,3 +16,8 @@ classifiers = [
 [tool.maturin]
 features = ["pyo3/extension-module"]
 module-name = "luma_python"
+
+[tool.uv.workspace]
+members = [
+    "examples",
+]
